@@ -30,6 +30,11 @@ def _get_int(name: str, default: int) -> int:
     return int(raw) if raw is not None and raw.strip() else default
 
 
+def _get_float(name: str, default: float) -> float:
+    raw = os.getenv(name)
+    return float(raw) if raw is not None and raw.strip() else default
+
+
 @dataclass(frozen=True, slots=True)
 class Settings:
     """Immutable application configuration, resolved from the environment."""
@@ -39,6 +44,9 @@ class Settings:
     llm_base_url: str = "http://localhost:8000/v1"
     llm_api_key: str = "not-needed"
     llm_model: str = "gpt-4o-mini"
+    # USD per 1M tokens, for cost estimation (0.0 = unknown pricing → reported as $0).
+    llm_price_input_per_1m: float = 0.0
+    llm_price_output_per_1m: float = 0.0
 
     # Query-target database (synthetic DYR Transportes; wired in task 0002).
     db_host: str = "localhost"
@@ -69,6 +77,8 @@ def get_settings() -> Settings:
         llm_base_url=_get("LLM_BASE_URL", "http://localhost:8000/v1"),
         llm_api_key=_get("LLM_API_KEY", "not-needed"),
         llm_model=_get("LLM_MODEL", "gpt-4o-mini"),
+        llm_price_input_per_1m=_get_float("LLM_PRICE_INPUT_PER_1M", 0.0),
+        llm_price_output_per_1m=_get_float("LLM_PRICE_OUTPUT_PER_1M", 0.0),
         db_host=_get("DB_HOST", "localhost"),
         db_port=_get_int("DB_PORT", 3306),
         db_user=_get("DB_USER", "llm_readonly"),

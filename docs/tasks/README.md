@@ -27,7 +27,7 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 | [0004](0004-sql-safety-layer/) | SQL safety layer — `sqlglot` validator + enforced `LIMIT` (pure + tested) | done | 0001 |
 | [0005](0005-rag-corpus-seeding/) | RAG corpus (DDL + business-rule docs + Q→SQL examples) + idempotent content-hashed ChromaDB seeding | done | 0003 |
 | [0006](0006-retrieval-engine/) | Retrieval engine — 4-tier merge + relationship-following (pure + tested); backs `search_schema` | done | 0005 |
-| 0007 | LLM client — OpenAI-compatible + mock provider (default) + prompts + tool schemas + per-call token/cost accounting | proposed | 0001 |
+| [0007](0007-llm-client/) | LLM client — OpenAI-compatible + mock provider (default) + prompts + tool schemas + per-call token/cost accounting | done | 0001 |
 | 0008 | Agentic orchestration — bounded tool-loop (`search_schema` + `run_sql`), intent + follow-up handling, and **execution-guided self-correction** (feed DB errors + empty/implausible results back for a repair pass), tested | proposed | 0004, 0006, 0007 |
 | 0009 | FastAPI endpoints + thin static chat UI (streaming) | proposed | 0008 |
 | 0010 | Full docker-compose + README + docs polish + `ai-workflow.md` finalization | proposed | 0009 |
@@ -61,3 +61,6 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 - [0006](0006-retrieval-engine/) — 4-tier retrieval merge (`app/retrieval.py`: semantic/example/
   relationship/keyword) + `RagStore.search_schema()` assembling the two-tier context (full DDL + summaries
   + docs + few-shots). The RAG payoff. 9 unit + 1 integration test.
+- [0007](0007-llm-client/) — provider-agnostic LLM client (`app/llm.py`): deterministic `MockProvider`
+  (default, drives the loop from history) + `OpenAIProvider` (lazy) + `app/prompts.py` (system prompt +
+  tool schemas) + per-call token/cost accounting. 10 unit tests.

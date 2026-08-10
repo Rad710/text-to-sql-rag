@@ -12,10 +12,11 @@ dependencies = [
     "pymysql>=1.1",
     "sqlglot>=25.0",
     "chromadb>=0.5",
+    "openai>=1.40",
 ]
 
-# Heavy/opt-in deps land in the task that first needs them:
-#   0007 → openai   (embeddings extra → sentence-transformers)
+# Opt-in extra for a real transformer embedder (deferred; offline embedder is the default):
+#   embeddings extra → sentence-transformers
 [project.optional-dependencies]
 embeddings = ["sentence-transformers>=5.0"]
 
