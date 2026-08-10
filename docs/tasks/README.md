@@ -27,19 +27,21 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 | [0004](0004-sql-safety-layer/) | SQL safety layer — `sqlglot` validator + enforced `LIMIT` (pure + tested) | done | 0001 |
 | [0005](0005-rag-corpus-seeding/) | RAG corpus (DDL + business-rule docs + Q→SQL examples) + idempotent content-hashed ChromaDB seeding | done | 0003 |
 | [0006](0006-retrieval-engine/) | Retrieval engine — 4-tier merge + relationship-following (pure + tested); backs `search_schema` | done | 0005 |
-| 0007 | LLM client — OpenAI-compatible + mock provider (default) + prompts + tool schemas | proposed | 0001 |
-| 0008 | Agentic orchestration — bounded tool-loop (`search_schema` + `run_sql`), intent + follow-up handling | proposed | 0004, 0006, 0007 |
+| 0007 | LLM client — OpenAI-compatible + mock provider (default) + prompts + tool schemas + per-call token/cost accounting | proposed | 0001 |
+| 0008 | Agentic orchestration — bounded tool-loop (`search_schema` + `run_sql`), intent + follow-up handling, and **execution-guided self-correction** (feed DB errors + empty/implausible results back for a repair pass), tested | proposed | 0004, 0006, 0007 |
 | 0009 | FastAPI endpoints + thin static chat UI (streaming) | proposed | 0008 |
 | 0010 | Full docker-compose + README + docs polish + `ai-workflow.md` finalization | proposed | 0009 |
 | 0011 | **Stretch:** standalone read-only SQL MCP server (schema-search + `run_sql` tools) over the synthetic DB | proposed | 0004, 0006 |
+| 0012 | **Evaluation harness** — a golden `(question → verified result)` set over the freight DB + an execution-accuracy runner (compare result sets, not string match) wired into CI; plus `docs/failure-modes.md` documenting where it breaks (ambiguity, wrong joins, silently-wrong filters, runs-but-semantically-wrong) | proposed | 0008 |
+| 0013 | Dev-experience polish — `.pre-commit-config.yaml` (ruff + ruff-format + mypy) + coverage reporting (`pytest-cov`) in CI | proposed | 0001 |
 
 ## Backlog — open, unscheduled
 
 - Query result → optional chart (the UI renders a simple bar/line when the shape fits)
 - Few-shot example curation from a feedback table (thumbs up/down persisted, promoted to the corpus)
-- Evaluation harness: a fixed set of NL→SQL questions with expected result shapes, run in CI against the
-  synthetic DB (regression guard for prompt/retrieval changes)
+- Enrich the schema corpus with column descriptions + sample values (stronger schema-linking)
 - Postgres dialect variant (prove the safety layer is dialect-parameterised)
+- Second, larger/messier schema to demonstrate schema-linking at scale
 
 ## Done
 
