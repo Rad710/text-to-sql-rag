@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 updated: 2026-08-10
 depends_on: [0008]
 decision: 0005
@@ -31,11 +31,14 @@ returning one blob. assistant-ui (0010) consumes a structured stream; we emit a 
    (`/health`; `/chat` streams SSE events end-to-end with an injected fake service; a live integration test).
 
 ## Done when
-- [ ] `stream_answer` yields the correct ordered events for a happy path and a self-correction, tested with
-      a stub (no DB/network).
-- [ ] `POST /chat` streams SSE events (tool steps + SQL + answer + usage); `GET /health` returns 200.
-- [ ] The endpoint is testable without a DB (dependency override) + a live integration test.
-- [ ] Unit gates green; heavy deps stay lazy.
+- [x] `stream_answer` yields the correct ordered events (tool_start → tool_result → answer → usage → done)
+      for a happy path and a self-correction — tested with a stub, no DB. `answer_question` now folds those
+      events, so it stays the single loop (existing agent tests still pass).
+- [x] `POST /chat` streams SSE events (tool steps + generated SQL + answer + token/cost); `GET /health` 200.
+      Verified live: full ordered event stream for a Spanish question.
+- [x] Endpoint tested without a DB (dependency override) + a live integration test.
+- [x] Unit gates green (97); `sse-starlette` avoided — plain `StreamingResponse` + manual SSE.
+      No token streaming yet (mock returns whole responses); step-level streaming is the useful granularity.
 
 ---
 Log → [`discussion.md`](discussion.md)

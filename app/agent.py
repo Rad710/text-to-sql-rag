@@ -11,7 +11,7 @@ The tools are injected as plain callables, so the loop is testable with stubs (n
 from __future__ import annotations
 
 import json
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -48,55 +48,94 @@ class AgentResult:
     iterations: int = 0
 
 
-def answer_question(
+@dataclass(frozen=True, slots=True)
+class AgentEvent:
+    """One streamed step of the loop (for SSE). ``type`` ∈ tool_start | tool_result | answer |
+    usage | done; ``data`` is JSON-serializable."""
+
+    type: str
+    data: dict[str, Any]
+
+
+def stream_answer(
     question: str, llm: LlmProvider, tools: AgentTools, max_iterations: int
-) -> AgentResult:
-    """Drive the bounded tool-loop and return the answer plus a trace."""
+) -> Iterator[AgentEvent]:
+    """Drive the bounded tool-loop, yielding events as it runs (the single source of truth)."""
     messages: list[dict[str, Any]] = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": question},
     ]
     usage = ZERO_USAGE
-    trace: list[ToolInvocation] = []
-    sql_attempts: list[str] = []
 
     for iteration in range(1, max_iterations + 1):
         response = llm.complete(messages, TOOLS)
         usage = usage + response.usage
 
         if not response.tool_calls:
-            return AgentResult(
-                answer=response.content or _FALLBACK,
-                sql=sql_attempts,
-                trace=trace,
-                usage=usage,
-                iterations=iteration,
-            )
+            yield AgentEvent("answer", {"text": response.content or _FALLBACK})
+            yield from _finish(usage, iteration)
+            return
 
         messages.append(_assistant_message(response))
         for call in response.tool_calls:
-            content = _dispatch(call.name, call.arguments, tools, question, sql_attempts)
-            trace.append(ToolInvocation(call.name, call.arguments, content[:200]))
+            yield AgentEvent("tool_start", {"name": call.name, "arguments": call.arguments})
+            content = _run_tool(call.name, call.arguments, tools, question)
+            yield AgentEvent(
+                "tool_result",
+                {"name": call.name, "arguments": call.arguments, "preview": content[:200]},
+            )
             messages.append({"role": "tool", "tool_call_id": call.id, "content": content})
 
-    return AgentResult(
-        answer=_EXHAUSTED, sql=sql_attempts, trace=trace, usage=usage, iterations=max_iterations
+    yield AgentEvent("answer", {"text": _EXHAUSTED})
+    yield from _finish(usage, max_iterations)
+
+
+def _finish(usage: Usage, iterations: int) -> Iterator[AgentEvent]:
+    yield AgentEvent(
+        "usage",
+        {
+            "prompt_tokens": usage.prompt_tokens,
+            "completion_tokens": usage.completion_tokens,
+            "total_tokens": usage.total_tokens,
+            "cost_usd": usage.cost_usd,
+            "iterations": iterations,
+        },
     )
+    yield AgentEvent("done", {})
 
 
-def _dispatch(
-    name: str,
-    arguments: dict[str, Any],
-    tools: AgentTools,
-    question: str,
-    sql_attempts: list[str],
-) -> str:
+def answer_question(
+    question: str, llm: LlmProvider, tools: AgentTools, max_iterations: int
+) -> AgentResult:
+    """Run the loop to completion and fold its events into an ``AgentResult``."""
+    answer = _FALLBACK
+    sql: list[str] = []
+    trace: list[ToolInvocation] = []
+    usage = ZERO_USAGE
+    iterations = 0
+
+    for event in stream_answer(question, llm, tools, max_iterations):
+        if event.type == "tool_result":
+            name, arguments = event.data["name"], event.data["arguments"]
+            trace.append(ToolInvocation(name, arguments, event.data["preview"]))
+            if name == "run_sql":
+                sql.append(str(arguments.get("query") or ""))
+        elif event.type == "answer":
+            answer = event.data["text"]
+        elif event.type == "usage":
+            usage = Usage(
+                event.data["prompt_tokens"], event.data["completion_tokens"], event.data["cost_usd"]
+            )
+            iterations = event.data["iterations"]
+
+    return AgentResult(answer=answer, sql=sql, trace=trace, usage=usage, iterations=iterations)
+
+
+def _run_tool(name: str, arguments: dict[str, Any], tools: AgentTools, question: str) -> str:
     if name == "search_schema":
         return tools.search_schema(str(arguments.get("question") or question))
     if name == "run_sql":
-        query = str(arguments.get("query") or "")
-        sql_attempts.append(query)
-        return format_result(tools.run_sql(query))
+        return format_result(tools.run_sql(str(arguments.get("query") or "")))
     return f"ERROR: unknown tool '{name}'"
 
 
@@ -136,3 +175,18 @@ def ask(
     provider = llm or get_llm(resolved)
     tools = build_tools(store, schema, resolved)
     return answer_question(question, provider, tools, resolved.agent_max_iterations)
+
+
+def stream(
+    question: str,
+    *,
+    store: Any,
+    schema: SchemaInfo,
+    settings: Settings | None = None,
+    llm: LlmProvider | None = None,
+) -> Iterator[AgentEvent]:
+    """Streaming counterpart of :func:`ask` — yields agent events for the SSE endpoint."""
+    resolved = settings or get_settings()
+    provider = llm or get_llm(resolved)
+    tools = build_tools(store, schema, resolved)
+    return stream_answer(question, provider, tools, resolved.agent_max_iterations)

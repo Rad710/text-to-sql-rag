@@ -20,6 +20,9 @@ load_dotenv(override=False)
 
 LlmMode = Literal["mock", "openai"]
 
+# Allowed CORS origins for the frontend dev/preview servers (Vite).
+_DEFAULT_CORS = ("http://localhost:5173", "http://localhost:4173")
+
 
 def _get(name: str, default: str) -> str:
     return os.getenv(name, default)
@@ -63,6 +66,9 @@ class Settings:
     # RAG store location (task 0005).
     chroma_path: str = ".chroma"
 
+    # Web API — allowed CORS origins for the Vite frontend (task 0009/0010).
+    cors_origins: tuple[str, ...] = _DEFAULT_CORS
+
     @property
     def is_mock(self) -> bool:
         return self.llm_mode == "mock"
@@ -89,4 +95,6 @@ def get_settings() -> Settings:
         agent_max_iterations=_get_int("AGENT_MAX_ITERATIONS", 6),
         statement_timeout_ms=_get_int("STATEMENT_TIMEOUT_MS", 5000),
         chroma_path=_get("CHROMA_PATH", ".chroma"),
+        cors_origins=tuple(o.strip() for o in _get("CORS_ORIGINS", "").split(",") if o.strip())
+        or _DEFAULT_CORS,
     )

@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from app.agent import _EXHAUSTED, AgentTools, answer_question
+from app.agent import _EXHAUSTED, AgentTools, answer_question, stream_answer
 from app.execution import RunResult
 from app.llm import LlmResponse, ToolCall, Usage
 
@@ -105,6 +105,48 @@ def test_unknown_tool_is_reported() -> None:
     result = answer_question("q", StubLLM(responses), _tools(lambda q: RunResult(sql=q)), 6)
     assert result.trace[0].result_preview.startswith("ERROR: unknown tool")
     assert result.answer == "done"
+
+
+def test_stream_emits_ordered_events() -> None:
+    responses = [
+        _call("search_schema", {"question": "q"}),
+        _call("run_sql", {"query": "SELECT 1"}),
+        _answer("42"),
+    ]
+    tools = _tools(lambda q: RunResult(sql=q, columns=["n"], rows=[(1,)]))
+    events = list(stream_answer("q", StubLLM(responses), tools, 6))
+
+    assert [e.type for e in events] == [
+        "tool_start",
+        "tool_result",
+        "tool_start",
+        "tool_result",
+        "answer",
+        "usage",
+        "done",
+    ]
+    run_starts = [e for e in events if e.type == "tool_start" and e.data["name"] == "run_sql"]
+    assert run_starts[0].data["arguments"]["query"] == "SELECT 1"  # SQL streamed to the UI
+    usage = next(e for e in events if e.type == "usage")
+    assert usage.data["iterations"] == 3 and usage.data["total_tokens"] > 0
+
+
+def test_stream_self_correction_emits_two_run_sql() -> None:
+    responses = [
+        _call("search_schema", {"question": "q"}),
+        _call("run_sql", {"query": "SELECT bad"}),
+        _call("run_sql", {"query": "SELECT good"}),
+        _answer("ok"),
+    ]
+
+    def run_sql(query: str) -> RunResult:
+        if "bad" in query:
+            return RunResult(sql=query, error="boom")
+        return RunResult(sql=query, columns=["n"], rows=[(1,)])
+
+    events = list(stream_answer("q", StubLLM(responses), _tools(run_sql), 6))
+    runs = [e for e in events if e.type == "tool_start" and e.data["name"] == "run_sql"]
+    assert [r.data["arguments"]["query"] for r in runs] == ["SELECT bad", "SELECT good"]
 
 
 @pytest.mark.integration

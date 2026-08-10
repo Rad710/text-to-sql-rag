@@ -29,7 +29,7 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 | [0006](0006-retrieval-engine/) | Retrieval engine — 4-tier merge + relationship-following (pure + tested); backs `search_schema` | done | 0005 |
 | [0007](0007-llm-client/) | LLM client — OpenAI-compatible + mock provider (default) + prompts + tool schemas + per-call token/cost accounting | done | 0001 |
 | [0008](0008-agentic-loop/) | Agentic orchestration — bounded tool-loop (`search_schema` + `run_sql`) + hardened execution + **execution-guided self-correction** (feed DB errors/empty results back for a repair pass), tested | done | 0004, 0006, 0007 |
-| [0009](0009-streaming-api/) | Agent **event-streaming** + **FastAPI SSE API** (backend we own) — refactor the loop to emit events (tool start → SQL → rows → answer → usage) + a `/chat` SSE endpoint + `/health` | in-progress | 0008 |
+| [0009](0009-streaming-api/) | Agent **event-streaming** + **FastAPI SSE API** (backend we own) — refactor the loop to emit events (tool start → SQL → rows → answer → usage) + a `/chat` SSE endpoint + `/health` | done | 0008 |
 | 0010 | **Vite + React + TypeScript frontend** (assistant-ui) consuming the SSE API — chat + generated SQL / tool-steps / token-cost, bilingual | proposed | 0009 |
 | 0011 | **Stretch:** standalone read-only SQL MCP server (schema-search + `run_sql` tools) over the synthetic DB | proposed | 0004, 0006 |
 | 0012 | **Evaluation harness** — a golden `(question → verified result)` set over the freight DB + an execution-accuracy runner (compare result sets, not string match) wired into CI; plus `docs/failure-modes.md` documenting where it breaks (ambiguity, wrong joins, silently-wrong filters, runs-but-semantically-wrong) | proposed | 0008 |
@@ -68,3 +68,6 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 - [0008](0008-agentic-loop/) — the bounded agentic loop (`app/agent.py`) + hardened `run_sql` execution
   (`app/execution.py`: validator + LIMIT + read-only user + timeout + row cap) + native self-correction.
   End-to-end works: NL question → search_schema → run_sql → answer. 5 unit + 6 integration tests.
+- [0009](0009-streaming-api/) — agent refactored to **stream events** (`stream_answer`; `answer_question`
+  folds them) + a **FastAPI SSE `/chat`** API (`app/api.py`) + `/health`. Streams tool steps + generated
+  SQL + answer + token/cost live. The backend we own for the custom UI. 4 unit + 1 integration test.
