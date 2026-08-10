@@ -10,11 +10,11 @@ dependencies = [
     "uvicorn[standard]>=0.30",
     "python-dotenv>=1.0",
     "pymysql>=1.1",
+    "sqlglot>=25.0",
 ]
 
 # Heavy/opt-in deps land in the task that first needs them:
-#   0004 → sqlglot   0005 → chromadb   0007 → openai
-#   (embeddings extra → sentence-transformers)
+#   0005 → chromadb   0007 → openai   (embeddings extra → sentence-transformers)
 [project.optional-dependencies]
 embeddings = ["sentence-transformers>=5.0"]
 
