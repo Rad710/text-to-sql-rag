@@ -32,7 +32,7 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 | [0009](0009-streaming-api/) | Agent **event-streaming** + **FastAPI SSE API** (backend we own) — refactor the loop to emit events (tool start → SQL → rows → answer → usage) + a `/chat` SSE endpoint + `/health` | done | 0008 |
 | [0010](0010-react-frontend/) | **Vite + React + TypeScript frontend** (assistant-ui) consuming the SSE API — chat + generated SQL / tool-steps / token-cost, bilingual | done | 0009 |
 | 0011 | **Stretch:** standalone read-only SQL MCP server (schema-search + `run_sql` tools) over the synthetic DB | proposed | 0004, 0006 |
-| 0012 | **Evaluation harness** — a golden `(question → verified result)` set over the freight DB + an execution-accuracy runner (compare result sets, not string match) wired into CI; plus `docs/failure-modes.md` documenting where it breaks (ambiguity, wrong joins, silently-wrong filters, runs-but-semantically-wrong) | proposed | 0008 |
+| [0012](0012-eval-harness/) | **Evaluation harness** — a golden `(question → gold SQL)` set + an execution-accuracy runner (compare result sets, not string match) wired into CI; plus `docs/failure-modes.md` | done | 0008 |
 | 0013 | Dev-experience polish — `.pre-commit-config.yaml` (ruff + ruff-format + mypy) + coverage reporting (`pytest-cov`) in CI | proposed | 0001 |
 | 0014 | **Deploy live** (the showcase must be clickable) — full docker-compose (API + built frontend + MySQL), a hosted URL, README + `ai-workflow.md` finalization | proposed | 0010 |
 
@@ -75,3 +75,6 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
   (primitives + `useLocalRuntime` + a `ChatModelAdapter` parsing our SSE) — streams the generated SQL +
   answer + token/cost, bilingual suggestions. `pnpm build` clean; SSE wiring verified. In-browser render QA
   deferred to a Playwright-MCP session (env-blocked here).
+- [0012](0012-eval-harness/) — **evaluation harness** (`evaluation/`): 8 gold cases + an execution-accuracy
+  runner (result-set compare, not string match) → **8/8 = 100%** mock accuracy, wired into CI; plus
+  `docs/failure-modes.md`. The headline "how well / where it breaks" artifact. 2 unit + 1 integration test.

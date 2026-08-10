@@ -117,7 +117,10 @@ uv run uvicorn app.api:app --reload
 uv run pytest
 uv run ruff check .
 uv run ruff format --check .
-uv run mypy app
+uv run mypy app evaluation
+
+# evaluation harness — execution accuracy on the gold set (needs the DB up)
+uv run python -m evaluation.runner
 
 # containers (app only for now; MySQL added in task 0002)
 docker compose up --build
