@@ -1,5 +1,10 @@
 allowBuilds:
   esbuild: true
-# Allow esbuild (used by Vite) to run its install script to fetch its native binary.
+  '@tailwindcss/oxide': true
+minimumReleaseAgeExclude:
+  - '@testing-library/jest-dom@7.0.1'
+# Allow esbuild (Vite) and Tailwind v4's oxide engine to run their install scripts to
+# fetch native binaries.
 onlyBuiltDependencies:
   - esbuild
+  - '@tailwindcss/oxide'

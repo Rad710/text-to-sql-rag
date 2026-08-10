@@ -1,4 +1,8 @@
-import type { ChatModelAdapter } from "@assistant-ui/react";
+import type {
+  ChatModelAdapter,
+  ThreadAssistantMessagePart,
+  ToolCallMessagePart,
+} from "@assistant-ui/react";
 
 // One Server-Sent Event from our FastAPI /chat stream.
 type SSEEvent = { type: string; data: Record<string, unknown> };
@@ -29,8 +33,11 @@ async function* parseSSE(body: ReadableStream<Uint8Array>): AsyncGenerator<SSEEv
 
 /**
  * assistant-ui local runtime adapter: POST the question to /chat and translate our SSE events
- * (tool_start / run_sql / answer / usage) into a progressively-built markdown message — the SQL
- * as a code block, then the answer, then a token/cost footer.
+ * into assistant-ui **message parts** so the agent's work renders natively — each `search_schema`
+ * / `run_sql` call becomes a **tool-call part** (a collapsible step showing the SQL and its result),
+ * followed by the answer and a token/cost footer. This is the tool-call rendering
+ * [decision 0005](../../docs/decisions/0005-custom-fastapi-sse-react-frontend.md) called for; the
+ * styled Thread's `ToolFallback`/`ToolGroup` render the parts.
  */
 export const adapter: ChatModelAdapter = {
   async *run({ messages, abortSignal }) {
@@ -51,25 +58,44 @@ export const adapter: ChatModelAdapter = {
       return;
     }
 
-    let markdown = "";
+    // Tool-call parts are built as events arrive; `pending` points at the call awaiting its result.
+    const tools: ToolCallMessagePart[] = [];
+    let pending = -1;
+    let answer = "";
+    let usage = "";
+
     for await (const evt of parseSSE(res.body)) {
       if (evt.type === "tool_start") {
-        const args = evt.data.arguments as Record<string, unknown> | undefined;
-        if (evt.data.name === "run_sql" && args?.query) {
-          markdown += "```sql\n" + String(args.query) + "\n```\n\n";
-        } else {
-          continue;
-        }
+        const name = String(evt.data.name ?? "tool");
+        const args = (evt.data.arguments as Record<string, unknown> | undefined) ?? {};
+        tools.push({
+          type: "tool-call",
+          toolCallId: `${name}-${tools.length}`,
+          toolName: name,
+          args: args as ToolCallMessagePart["args"],
+          // Show the meaningful argument as plain text in the collapsible step — the SQL for
+          // run_sql, the question for search_schema — instead of raw JSON.
+          argsText: String(args.query ?? args.question ?? JSON.stringify(args)),
+        });
+        pending = tools.length - 1;
+      } else if (evt.type === "tool_result") {
+        const idx = pending >= 0 ? pending : tools.length - 1;
+        if (tools[idx]) tools[idx] = { ...tools[idx], result: evt.data.preview };
+        pending = -1;
       } else if (evt.type === "answer") {
-        markdown += String(evt.data.text ?? "");
+        answer = String(evt.data.text ?? "");
       } else if (evt.type === "usage") {
         const d = evt.data;
         const cost = Number(d.cost_usd ?? 0).toFixed(4);
-        markdown += `\n\n\`${d.iterations} steps · ${d.total_tokens} tokens · $${cost}\``;
+        usage = `\`${d.iterations} steps · ${d.total_tokens} tokens · $${cost}\``;
       } else {
-        continue;
+        continue; // e.g. "done"
       }
-      yield { content: [{ type: "text", text: markdown }] };
+
+      const content: ThreadAssistantMessagePart[] = [...tools];
+      const trailing = [answer, usage].filter(Boolean).join("\n\n");
+      if (trailing) content.push({ type: "text", text: trailing });
+      yield { content };
     }
   },
 };

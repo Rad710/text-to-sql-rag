@@ -24,5 +24,9 @@ frontend/dist/
 .DS_Store
 *.swp
 
-# Local MCP config (Playwright QA)
+# Local MCP config + Playwright QA output
 .mcp.json
+.playwright-mcp/
+
+# Session-continuity note (dev artifact; the docs/tasks tracker is the durable record)
+HANDOFF.md

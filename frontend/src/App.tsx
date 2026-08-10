@@ -1,11 +1,8 @@
-import {
-  AssistantRuntimeProvider,
-  ComposerPrimitive,
-  MessagePrimitive,
-  ThreadPrimitive,
-  useLocalRuntime,
-} from "@assistant-ui/react";
-import { MarkdownTextPrimitive } from "@assistant-ui/react-markdown";
+import { AssistantRuntimeProvider, ThreadPrimitive, useLocalRuntime } from "@assistant-ui/react";
+import type { FC } from "react";
+
+import { Thread } from "@/components/assistant-ui/thread";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 import { adapter } from "./runtime";
 
@@ -16,76 +13,45 @@ const SUGGESTIONS = [
   "drivers with unpaid settlements and pending amount",
 ];
 
-const MarkdownText = () => <MarkdownTextPrimitive />;
-
-const UserMessage = () => (
-  <MessagePrimitive.Root className="msg user">
-    <MessagePrimitive.Content />
-  </MessagePrimitive.Root>
+// Branded, bilingual empty state — replaces the Thread's default "How can I help you today?".
+const Welcome: FC = () => (
+  <div className="mb-8 flex flex-col items-center px-4 text-center">
+    <div className="mb-3 text-4xl">🚚</div>
+    <h1 className="text-2xl font-semibold tracking-tight">¿Qué querés saber?</h1>
+    <p className="text-muted-foreground mt-1.5 text-sm">
+      Preguntá en español o inglés · Ask about shipments, drivers, routes & billing
+    </p>
+    <div className="mt-6 flex flex-wrap justify-center gap-2">
+      {SUGGESTIONS.map((s) => (
+        <ThreadPrimitive.Suggestion
+          key={s}
+          prompt={s}
+          method="replace"
+          autoSend
+          className="border-border/60 text-foreground hover:bg-muted max-w-xs cursor-pointer rounded-full border px-3.5 py-1.5 text-sm transition-colors"
+        >
+          {s}
+        </ThreadPrimitive.Suggestion>
+      ))}
+    </div>
+  </div>
 );
-
-const AssistantMessage = () => (
-  <MessagePrimitive.Root className="msg assistant">
-    <MessagePrimitive.Content components={{ Text: MarkdownText }} />
-  </MessagePrimitive.Root>
-);
-
-function Thread() {
-  return (
-    <ThreadPrimitive.Root className="thread">
-      <ThreadPrimitive.Viewport className="viewport">
-        <ThreadPrimitive.Empty>
-          <div className="welcome">
-            <h1>What would you like to know?</h1>
-            <p>Ask in English or Spanish · Preguntá en español o inglés</p>
-            <div className="suggestions">
-              {SUGGESTIONS.map((s) => (
-                <ThreadPrimitive.Suggestion
-                  key={s}
-                  prompt={s}
-                  method="replace"
-                  autoSend
-                  className="suggestion"
-                >
-                  {s}
-                </ThreadPrimitive.Suggestion>
-              ))}
-            </div>
-          </div>
-        </ThreadPrimitive.Empty>
-
-        <ThreadPrimitive.Messages
-          components={{ UserMessage, AssistantMessage }}
-        />
-
-        <ThreadPrimitive.ViewportFooter className="composer-row">
-          <ComposerPrimitive.Root className="composer">
-            <ComposerPrimitive.Input
-              className="composer-input"
-              placeholder="Ask about shipments, drivers, routes, billing…"
-              autoFocus
-            />
-            <ComposerPrimitive.Send className="composer-send" aria-label="Send">
-              ↑
-            </ComposerPrimitive.Send>
-          </ComposerPrimitive.Root>
-        </ThreadPrimitive.ViewportFooter>
-      </ThreadPrimitive.Viewport>
-    </ThreadPrimitive.Root>
-  );
-}
 
 export default function App() {
   const runtime = useLocalRuntime(adapter);
   return (
     <AssistantRuntimeProvider runtime={runtime}>
-      <div className="app">
-        <header className="topbar">
-          <span className="brand">🚚 DYR Transportes — Data Assistant</span>
-          <span className="tag">text-to-SQL · RAG · mock mode</span>
-        </header>
-        <Thread />
-      </div>
+      <TooltipProvider>
+        <div className="flex h-full flex-col">
+          <header className="border-border flex items-baseline gap-3 border-b px-6 py-3.5">
+            <span className="font-semibold">🚚 DYR Transportes — Data Assistant</span>
+            <span className="text-muted-foreground text-xs">text-to-SQL · RAG · mock mode</span>
+          </header>
+          <div className="min-h-0 flex-1">
+            <Thread components={{ Welcome }} />
+          </div>
+        </div>
+      </TooltipProvider>
     </AssistantRuntimeProvider>
   );
 }
