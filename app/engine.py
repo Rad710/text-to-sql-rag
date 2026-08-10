@@ -15,6 +15,24 @@ from typing import Any
 from app.config import get_settings
 from app.corpus import COLLECTIONS, CorpusItem
 from app.embeddings import Embedder, get_embedder
+from app.retrieval import (
+    RetrievedContext,
+    extract_tables_from_sql,
+    follow_relationships,
+    keyword_tables,
+    merge_candidates,
+)
+from app.schema import SchemaInfo, render_table_ddl, render_table_summary
+
+
+def _dedupe(names: list[str]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for name in names:
+        if name not in seen:
+            seen.add(name)
+            out.append(name)
+    return out
 
 
 @dataclass(frozen=True, slots=True)
@@ -103,3 +121,48 @@ class RagStore:
         ):
             hits.append(QueryHit(id=item_id, document=doc, metadata=meta, distance=dist))
         return hits
+
+    def search_schema(
+        self,
+        question: str,
+        schema: SchemaInfo,
+        *,
+        max_full_ddl: int = 6,
+        n_semantic: int = 6,
+        n_examples: int = 4,
+        n_docs: int = 4,
+    ) -> RetrievedContext:
+        """The `search_schema` tool: retrieve + 4-tier merge + assemble the agent's context."""
+        known = {t.name for t in schema.tables}
+
+        # P1 semantic — tables whose DDL is nearest the question (nearest-first).
+        semantic = _dedupe([h.metadata["table"] for h in self.query("ddl", question, n_semantic)])
+
+        # P2 example — tables named in the retrieved few-shot SQL.
+        example_hits = self.query("question_sql", question, n_examples)
+        example: list[str] = []
+        for hit in example_hits:
+            for table in extract_tables_from_sql(hit.metadata["sql"], known):
+                if table not in example:
+                    example.append(table)
+
+        # P3 relationship — join neighbours of what we've chosen so far.
+        relationship = follow_relationships(_dedupe(semantic + example), schema)
+
+        # P4 keyword — token match against table/column names.
+        keyword = keyword_tables(question, schema)
+
+        ordered = [c.table for c in merge_candidates(semantic, example, relationship, keyword)]
+        top = ordered[:max_full_ddl]
+        rest = [t for t in ordered if t not in top] + sorted(t for t in known if t not in ordered)
+
+        ddl = [render_table_ddl(schema, tbl) for t in top if (tbl := schema.table(t)) is not None]
+        summaries = [
+            render_table_summary(tbl) for t in rest if (tbl := schema.table(t)) is not None
+        ]
+        docs = [h.document for h in self.query("documentation", question, n_docs)]
+        examples = [(h.document, h.metadata["sql"]) for h in example_hits]
+
+        return RetrievedContext(
+            tables=top, ddl=ddl, summaries=summaries, docs=docs, examples=examples
+        )
