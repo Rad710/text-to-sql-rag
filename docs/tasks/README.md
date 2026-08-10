@@ -23,7 +23,7 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 |---|------|--------|-----------|
 | [0001](0001-project-scaffold/) | Project scaffold + tooling — FastAPI skeleton, config, ruff/mypy/pytest, CI, docker-compose base, mock-default run | done | — |
 | [0002](0002-synthetic-mysql-db/) | Synthetic DYR Transportes MySQL DB — init-SQL schema + obviously-fake seed + read-only user | done | 0001 |
-| 0003 | Schema introspection → single-source annotated DDL (tables, columns, join annotations) | proposed | 0002 |
+| [0003](0003-schema-introspection/) | Schema introspection → single-source annotated DDL (tables, columns, join annotations) | done | 0002 |
 | 0004 | SQL safety layer — `sqlglot` validator + enforced `LIMIT` + connection hardening (pure + tested) | proposed | 0001 |
 | 0005 | RAG corpus (DDL + business-rule docs + Q→SQL examples) + idempotent content-hashed ChromaDB seeding | proposed | 0003 |
 | 0006 | Retrieval engine — 4-tier merge + relationship-following (pure + tested); backs `search_schema` | proposed | 0005 |
@@ -48,3 +48,6 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 - [0002](0002-synthetic-mysql-db/) — synthetic MySQL DB via init SQL (7 business tables + fake seed +
   `SELECT`-only user); `docker compose up` auto-applies it. Read-only guarantee proven by 6 integration
   tests + a CI integration job.
+- [0003](0003-schema-introspection/) — `information_schema` introspection → pure annotated-DDL renderer
+  (`app/schema.py` + `app/introspect.py`) with bidirectional FK `-- joins:` annotations + compact
+  summaries. The single source of truth for the RAG layer. 5 unit + 3 integration tests.

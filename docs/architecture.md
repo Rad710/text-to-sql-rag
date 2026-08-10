@@ -33,6 +33,8 @@ loop; there is no separate repair stage.
 | `app/config.py` | Frozen dataclass settings, env-driven, no DB/network on import | pure |
 | `app/validator.py` | `sqlglot` read-only validation (single SELECT, no DML/DDL, dialect=mysql) | **pure** |
 | `app/limits.py` | Enforce/clamp `LIMIT` by rewriting the AST | **pure** |
+| `app/introspect.py` | Read `information_schema` → `SchemaInfo` (live DB) | impure (lazy I/O) |
+| `app/schema.py` | Schema model + annotated DDL / join-annotation / summary rendering | **pure** |
 | `app/retrieval.py` | 4-tier candidate merge + table/join/keyword extraction | **pure** |
 | `app/embeddings.py` | Offline hashing embedder (mock/CI) + lazy real embedder | mixed |
 | `app/engine.py` | ChromaDB client, seed sync, `search_schema`, `run_sql` execution | impure (lazy I/O) |
