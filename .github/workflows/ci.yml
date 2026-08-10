@@ -30,3 +30,49 @@ jobs:
 
       - name: Test (pytest)
         run: uv run pytest
+
+  integration:
+    runs-on: ubuntu-latest
+    # Throwaway credentials for the ephemeral CI service container only — never used elsewhere.
+    env:
+      MYSQL_ROOT_PASSWORD: ci-root-pw
+      MYSQL_DATABASE: dyrtransportes
+      DB_HOST: 127.0.0.1
+      DB_PORT: "3306"
+      DB_USER: llm_readonly
+      DB_PASSWORD: ci-readonly-pw
+      DB_NAME: dyrtransportes
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-root-pw
+          MYSQL_DATABASE: dyrtransportes
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pci-root-pw"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply schema + seed + read-only grant (same scripts as docker compose)
+        env:
+          MYSQL_HOST: 127.0.0.1
+        run: |
+          mysql -h 127.0.0.1 -u root -p"$MYSQL_ROOT_PASSWORD" < db/init/01_schema.sql
+          mysql -h 127.0.0.1 -u root -p"$MYSQL_ROOT_PASSWORD" < db/init/02_seed.sql
+          bash db/init/03_grant_readonly.sh
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Integration tests (live MySQL, read-only guarantee)
+        run: uv run pytest -m integration

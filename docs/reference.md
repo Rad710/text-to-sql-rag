@@ -15,6 +15,12 @@ DINATRAN, the national transport regulator). It hauls bulk product by truck alon
 Spanish domain terms: *Cobranzas* = shipments/collections · *Nómina* = drivers · *Precios* = routes/prices
 · *Planillas* = shipment payrolls · *Liquidaciones* = driver settlements · *Fletes* = freight fees.
 
+## Scope of the synthetic demo
+
+The demo materializes **only the 7 business tables** below (via `db/init/*`, see
+[decisions/0004](decisions/0004-synthetic-db-via-init-sql.md)). The real project's `*_audit` companion
+tables + triggers and the `user` auth table are **omitted** as query-irrelevant noise.
+
 ## Engine
 
 **MySQL 8** (real project uses MySQL 9 via SQLAlchemy 2.0 + Alembic). Money = `DECIMAL(10,2)`; weights =

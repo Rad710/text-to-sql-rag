@@ -37,7 +37,8 @@ loop. See [`docs/architecture.md`](docs/architecture.md) for the full design and
 - **Agent:** function/tool calling via the chat-completions tools API; bounded loop
 - **RAG:** ChromaDB (embedded PersistentClient) over DDL, business-rule docs, and Q→SQL example pairs
 - **SQL safety:** `sqlglot` (AST-level validation) + code-enforced `LIMIT` + a read-only DB user
-- **Query DB:** MySQL 8 (synthetic DYR Transportes schema); migrations via Alembic
+- **Query DB:** MySQL 8 (synthetic DYR Transportes schema); provisioned via SQL init scripts (see
+  [decision 0004](docs/decisions/0004-synthetic-db-via-init-sql.md))
 - **Tests:** pytest. **Lint/format:** ruff. **Types:** mypy. **CI:** GitHub Actions.
 - **Packaging:** Docker + docker-compose (app + MySQL + mock LLM by default)
 

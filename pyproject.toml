@@ -9,11 +9,12 @@ dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.30",
     "python-dotenv>=1.0",
+    "pymysql>=1.1",
 ]
 
 # Heavy/opt-in deps land in the task that first needs them:
-#   0002 → pymysql, sqlalchemy, alembic   0004 → sqlglot
-#   0005 → chromadb   0007 → openai   (embeddings extra → sentence-transformers)
+#   0004 → sqlglot   0005 → chromadb   0007 → openai
+#   (embeddings extra → sentence-transformers)
 [project.optional-dependencies]
 embeddings = ["sentence-transformers>=5.0"]
 
@@ -48,4 +49,9 @@ warn_return_any = true
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
-addopts = "-q"
+# Integration tests (live MySQL) are opt-in: the default run stays fast and DB-free.
+# Run them with:  uv run pytest -m integration
+addopts = '-q -m "not integration"'
+markers = [
+    "integration: requires a live MySQL (the synthetic demo DB)",
+]

@@ -1,15 +1,43 @@
-# Base stack. Task 0001 ships the app only (mock LLM, no key needed).
-# The synthetic MySQL service + migrations are added in task 0002.
+# Base stack: the app (mock LLM by default) + the synthetic MySQL query DB.
+# Secrets come from a local .env (copy .env.example → .env); nothing sensitive is hardcoded here.
+# `docker compose up` brings up MySQL, auto-applies db/init/* (schema + seed + read-only grant),
+# then starts the app once MySQL is healthy. No LLM API key needed (mock mode).
 services:
   app:
     build: .
     ports:
       - "8000:8000"
     environment:
-      LLM_MODE: mock
+      LLM_MODE: ${LLM_MODE:-mock}
+      DB_HOST: mysql            # service name on the compose network
+      DB_PORT: "3306"
+      DB_USER: ${DB_USER:-llm_readonly}
+      DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env (copy .env.example)}
+      DB_NAME: dyrtransportes
+    depends_on:
+      mysql:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 10s
       timeout: 3s
       retries: 5
       start_period: 10s
+
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env (copy .env.example)}
+      MYSQL_DATABASE: dyrtransportes
+      DB_USER: ${DB_USER:-llm_readonly}      # read by db/init/03_grant_readonly.sh
+      DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env (copy .env.example)}
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
