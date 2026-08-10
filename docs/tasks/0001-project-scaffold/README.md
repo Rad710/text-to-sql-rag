@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: done
 updated: 2026-08-10
 depends_on: []
 decision: 0001
@@ -32,13 +32,15 @@ keep later work honest. Pure/impure separation and mock-default are set up now s
 8. Fill the "Build & dev commands" placeholder in [`../../CLAUDE.md`](../../CLAUDE.md).
 
 ## Done when
-- [ ] `uvicorn app.main:app` starts with no env set; `GET /health` returns 200; `POST /chat` returns a
-      mock stub.
-- [ ] `pytest` passes; `ruff check .` and `ruff format --check .` clean; `mypy app` clean.
-- [ ] Importing `app.config` performs no DB or network I/O (asserted by a test).
-- [ ] `.github/workflows/ci.yml` runs the four gates and is green on the branch.
-- [ ] `.env.example` documents every setting; no secrets committed.
-- [ ] CLAUDE.md "Build & dev commands" reflects the real commands.
+- [x] `uvicorn app.main:app` starts with no env set; `GET /health` returns 200; `POST /chat` returns a
+      mock stub. *(smoke-tested live on port 8137.)*
+- [x] `pytest` passes (8 tests); `ruff check .` and `ruff format --check .` clean; `mypy app` clean.
+- [x] Importing `app.config` performs no DB or network I/O — reads env + best-effort `.env` only;
+      behaviour covered by `tests/test_config.py`.
+- [x] `.github/workflows/ci.yml` runs the four gates. *(Green-on-push confirmed by the user's commit/push;
+      verified locally.)*
+- [x] `.env.example` documents every setting; no secrets committed.
+- [x] CLAUDE.md "Build & dev commands" reflects the real commands.
 
 ---
 Log → [`discussion.md`](discussion.md)

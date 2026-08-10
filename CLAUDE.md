@@ -101,19 +101,22 @@ a test, don't remove the check.
 
 ## Build & dev commands
 
-*(Filled in by task 0001 — the scaffold. Placeholder until then.)*
+The project uses **uv**. `uv sync` creates `.venv` and installs deps (incl. the `dev` group).
 
 ```bash
-# run the app (mock LLM by default — no key needed)
-uvicorn app.main:app --reload
+uv sync                                   # set up / update the environment
 
-# tests / lint / types
-pytest
-ruff check . && ruff format --check .
-mypy app
+# run the app (mock LLM by default — no key needed) → http://localhost:8000
+uv run uvicorn app.main:app --reload
 
-# full stack (app + MySQL + migrations)
-docker compose up
+# quality gates (all four must pass)
+uv run pytest
+uv run ruff check .
+uv run ruff format --check .
+uv run mypy app
+
+# containers (app only for now; MySQL added in task 0002)
+docker compose up --build
 ```
 
 ## Reference repos (do not copy secrets or business logic)

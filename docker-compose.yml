@@ -1,0 +1,15 @@
+# Base stack. Task 0001 ships the app only (mock LLM, no key needed).
+# The synthetic MySQL service + migrations are added in task 0002.
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      LLM_MODE: mock
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s

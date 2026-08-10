@@ -21,7 +21,7 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 
 | # | Task | Status | Depends on |
 |---|------|--------|-----------|
-| [0001](0001-project-scaffold/) | Project scaffold + tooling — FastAPI skeleton, config, ruff/mypy/pytest, CI, docker-compose base, mock-default run | proposed | — |
+| [0001](0001-project-scaffold/) | Project scaffold + tooling — FastAPI skeleton, config, ruff/mypy/pytest, CI, docker-compose base, mock-default run | done | — |
 | 0002 | Synthetic DYR Transportes MySQL DB — Alembic migrations + obviously-fake seed data + read-only user | proposed | 0001 |
 | 0003 | Schema introspection → single-source annotated DDL (tables, columns, join annotations) | proposed | 0002 |
 | 0004 | SQL safety layer — `sqlglot` validator + enforced `LIMIT` + connection hardening (pure + tested) | proposed | 0001 |
@@ -43,4 +43,5 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 
 ## Done
 
-*(none yet — this is a greenfield build)*
+- [0001](0001-project-scaffold/) — FastAPI skeleton + config + ruff/mypy/pytest + CI + Docker; runs in mock
+  mode with no key. Gates green locally (8 tests), live-smoke-tested.
