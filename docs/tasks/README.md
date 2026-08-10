@@ -25,7 +25,7 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 | [0002](0002-synthetic-mysql-db/) | Synthetic DYR Transportes MySQL DB — init-SQL schema + obviously-fake seed + read-only user | done | 0001 |
 | [0003](0003-schema-introspection/) | Schema introspection → single-source annotated DDL (tables, columns, join annotations) | done | 0002 |
 | [0004](0004-sql-safety-layer/) | SQL safety layer — `sqlglot` validator + enforced `LIMIT` (pure + tested) | done | 0001 |
-| 0005 | RAG corpus (DDL + business-rule docs + Q→SQL examples) + idempotent content-hashed ChromaDB seeding | proposed | 0003 |
+| [0005](0005-rag-corpus-seeding/) | RAG corpus (DDL + business-rule docs + Q→SQL examples) + idempotent content-hashed ChromaDB seeding | done | 0003 |
 | 0006 | Retrieval engine — 4-tier merge + relationship-following (pure + tested); backs `search_schema` | proposed | 0005 |
 | 0007 | LLM client — OpenAI-compatible + mock provider (default) + prompts + tool schemas | proposed | 0001 |
 | 0008 | Agentic orchestration — bounded tool-loop (`search_schema` + `run_sql`), intent + follow-up handling | proposed | 0004, 0006, 0007 |
@@ -53,3 +53,6 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
   summaries. The single source of truth for the RAG layer. 5 unit + 3 integration tests.
 - [0004](0004-sql-safety-layer/) — `app/validator.py` (sqlglot AST read-only validation) + `app/limits.py`
   (code-enforced LIMIT). Pure, 31 new unit tests. The guardrails for the `run_sql` tool.
+- [0005](0005-rag-corpus-seeding/) — RAG corpus (`app/corpus.py`) + offline embedder (`app/embeddings.py`)
+  + ChromaDB store (`app/engine.py`) with idempotent content-hashed seeding. Runs offline (precomputed
+  embeddings, no model download). 13 unit + 1 live-pipeline integration test.
