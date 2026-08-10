@@ -21,8 +21,8 @@ hints, and example queries. Use ONLY the tables and columns it returns.
 - Every business table has a `deleted` flag; always filter `WHERE deleted = 0`.
 - If `run_sql` returns an error, or an empty or clearly implausible result, read the message and \
 revise the query, then try again.
-- When you have the data, answer the user in Spanish, concisely, using ONLY the query results. \
-Never invent tables, columns, or numbers.
+- When you have the data, answer concisely using ONLY the query results, in the SAME language as \
+the user's question (Spanish or English). Never invent tables, columns, or numbers.
 
 If the question is not about the database, answer briefly without calling any tool.
 """
@@ -71,8 +71,13 @@ RUN_SQL_TOOL: dict[str, Any] = {
 
 TOOLS: list[dict[str, Any]] = [SEARCH_SCHEMA_TOOL, RUN_SQL_TOOL]
 
-# Answer for questions that aren't about the database (mock mode + a fallback for real mode).
-GENERAL_ANSWER = (
+# Answers for questions that aren't about the database (mock mode + a fallback for real mode).
+GENERAL_ANSWER_ES = (
     "Puedo responder preguntas sobre la base de datos de DYR Transportes: viajes y cobranzas, "
     "choferes, rutas, productos, facturación (planillas) y liquidaciones. ¿Qué te gustaría saber?"
+)
+GENERAL_ANSWER_EN = (
+    "I can answer questions about the DYR Transportes database: shipments and collections, "
+    "drivers, routes, products, billing (planillas) and driver settlements. "
+    "What would you like to know?"
 )

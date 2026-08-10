@@ -16,6 +16,10 @@ venv/
 # RAG vector store
 .chroma/
 
+# Node / frontend (task 0010)
+node_modules/
+frontend/dist/
+
 # OS / editor
 .DS_Store
 *.swp

@@ -29,11 +29,12 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 | [0006](0006-retrieval-engine/) | Retrieval engine — 4-tier merge + relationship-following (pure + tested); backs `search_schema` | done | 0005 |
 | [0007](0007-llm-client/) | LLM client — OpenAI-compatible + mock provider (default) + prompts + tool schemas + per-call token/cost accounting | done | 0001 |
 | [0008](0008-agentic-loop/) | Agentic orchestration — bounded tool-loop (`search_schema` + `run_sql`) + hardened execution + **execution-guided self-correction** (feed DB errors/empty results back for a repair pass), tested | done | 0004, 0006, 0007 |
-| 0009 | FastAPI endpoints + thin static chat UI (streaming) | proposed | 0008 |
-| 0010 | Full docker-compose + README + docs polish + `ai-workflow.md` finalization | proposed | 0009 |
+| [0009](0009-streaming-api/) | Agent **event-streaming** + **FastAPI SSE API** (backend we own) — refactor the loop to emit events (tool start → SQL → rows → answer → usage) + a `/chat` SSE endpoint + `/health` | in-progress | 0008 |
+| 0010 | **Vite + React + TypeScript frontend** (assistant-ui) consuming the SSE API — chat + generated SQL / tool-steps / token-cost, bilingual | proposed | 0009 |
 | 0011 | **Stretch:** standalone read-only SQL MCP server (schema-search + `run_sql` tools) over the synthetic DB | proposed | 0004, 0006 |
 | 0012 | **Evaluation harness** — a golden `(question → verified result)` set over the freight DB + an execution-accuracy runner (compare result sets, not string match) wired into CI; plus `docs/failure-modes.md` documenting where it breaks (ambiguity, wrong joins, silently-wrong filters, runs-but-semantically-wrong) | proposed | 0008 |
 | 0013 | Dev-experience polish — `.pre-commit-config.yaml` (ruff + ruff-format + mypy) + coverage reporting (`pytest-cov`) in CI | proposed | 0001 |
+| 0014 | **Deploy live** (the showcase must be clickable) — full docker-compose (API + built frontend + MySQL), a hosted URL, README + `ai-workflow.md` finalization | proposed | 0010 |
 
 ## Backlog — open, unscheduled
 

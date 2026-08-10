@@ -10,6 +10,7 @@ from app.llm import (
     MockProvider,
     OpenAIProvider,
     Usage,
+    _detect_lang,
     _estimate_cost,
     get_llm,
 )
@@ -107,5 +108,83 @@ def test_get_llm_openai_mode() -> None:
     assert isinstance(get_llm(Settings(llm_mode="openai")), OpenAIProvider)
 
 
+# --- OpenAIProvider: fake the client to test request-building + response-parsing (no network) ---
+
+
+def _fake_response(
+    content: str | None, tool_calls: list[tuple[str, str, str]], pt: int, ct: int
+) -> Any:
+    from types import SimpleNamespace as NS
+
+    calls = [NS(id=i, function=NS(name=n, arguments=a)) for i, n, a in tool_calls]
+    message = NS(content=content, tool_calls=calls or None)
+    return NS(choices=[NS(message=message)], usage=NS(prompt_tokens=pt, completion_tokens=ct))
+
+
+class _FakeClient:
+    def __init__(self, response: Any) -> None:
+        self.captured: dict[str, Any] = {}
+
+        def create(**kwargs: Any) -> Any:
+            self.captured = kwargs
+            return response
+
+        completions = type("C", (), {"create": staticmethod(create)})
+        self.chat = type("Chat", (), {"completions": completions})
+
+
+def test_openai_provider_parses_tool_calls_and_cost() -> None:
+    settings = Settings(llm_mode="openai", llm_price_input_per_1m=1.0, llm_price_output_per_1m=2.0)
+    provider = OpenAIProvider(settings)
+    fake = _FakeClient(_fake_response(None, [("id1", "run_sql", '{"query": "SELECT 1"}')], 100, 50))
+    provider._client = fake  # inject the fake client
+
+    resp = provider.complete([{"role": "user", "content": "x"}], TOOLS)
+
+    assert [tc.name for tc in resp.tool_calls] == ["run_sql"]
+    assert resp.tool_calls[0].arguments == {"query": "SELECT 1"}
+    assert resp.usage.prompt_tokens == 100 and resp.usage.completion_tokens == 50
+    assert resp.usage.cost_usd == 100 / 1_000_000 * 1.0 + 50 / 1_000_000 * 2.0
+    # tools were passed through to the API call
+    assert fake.captured["tools"] == TOOLS
+    assert fake.captured["tool_choice"] == "auto"
+
+
+def test_openai_provider_parses_plain_content() -> None:
+    provider = OpenAIProvider(Settings(llm_mode="openai"))
+    provider._client = _FakeClient(_fake_response("hello", [], 10, 5))
+    resp = provider.complete([{"role": "user", "content": "x"}], None)
+    assert resp.content == "hello"
+    assert resp.tool_calls == []
+
+
 def test_tool_schemas_shape() -> None:
     assert {t["function"]["name"] for t in TOOLS} == {"search_schema", "run_sql"}
+
+
+def test_detect_language() -> None:
+    assert _detect_lang("facturación total por ruta") == "es"
+    assert _detect_lang("how many shipments per driver") == "en"
+    assert _detect_lang("planillas sin cobrar y su total pendiente") == "es"
+
+
+def test_spanish_db_question_enters_tool_path() -> None:
+    r = mock.complete([SYS, _user("planillas sin cobrar y su total pendiente")], TOOLS)
+    assert [tc.name for tc in r.tool_calls] == ["search_schema"]
+
+
+def test_answer_language_matches_question() -> None:
+    def convo(q: str) -> list[dict[str, Any]]:
+        return [
+            SYS,
+            _user(q),
+            _assistant_call("search_schema", {"question": q}),
+            _tool_result("ctx"),
+            _assistant_call("run_sql", {"query": "SELECT 1"}),
+            _tool_result("rows"),
+        ]
+
+    es = mock.complete(convo("facturación total por ruta"), TOOLS).content
+    en = mock.complete(convo("total freight revenue per route"), TOOLS).content
+    assert es is not None and es.startswith("Según")
+    assert en is not None and en.startswith("Based on")

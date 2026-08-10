@@ -6,14 +6,14 @@ readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
 dependencies = [
-    "fastapi>=0.115",
-    "uvicorn[standard]>=0.30",
     "python-dotenv>=1.0",
     "pymysql>=1.1",
     "sqlglot>=25.0",
     "chromadb>=0.5",
     "openai>=1.40",
 ]
+
+# The web layer (FastAPI SSE API) lands in task 0009: fastapi, uvicorn, sse-starlette, assistant-stream.
 
 # Opt-in extra for a real transformer embedder (deferred; offline embedder is the default):
 #   embeddings extra → sentence-transformers
@@ -25,7 +25,6 @@ dev = [
     "pytest>=8.3",
     "ruff>=0.6",
     "mypy>=1.11",
-    "httpx>=0.27",
 ]
 
 [tool.uv]

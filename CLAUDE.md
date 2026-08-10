@@ -31,7 +31,9 @@ loop. See [`docs/architecture.md`](docs/architecture.md) for the full design and
 ## Tech stack
 
 - **Language:** Python 3.12
-- **API:** FastAPI + Uvicorn; a thin static HTML/JS chat page served by the app (no build step)
+- **API:** FastAPI + Uvicorn — streaming (SSE) `/chat` (task 0009)
+- **Frontend:** Vite + React + TypeScript using assistant-ui (task 0010) — see
+  [decision 0005](docs/decisions/0005-custom-fastapi-sse-react-frontend.md)
 - **LLM client:** `openai` SDK against any **OpenAI-compatible** endpoint (cloud or self-hosted). A
   deterministic **mock provider is the default** — the app runs with no API key.
 - **Agent:** function/tool calling via the chat-completions tools API; bounded loop
@@ -107,8 +109,9 @@ The project uses **uv**. `uv sync` creates `.venv` and installs deps (incl. the 
 ```bash
 uv sync                                   # set up / update the environment
 
-# run the app (mock LLM by default — no key needed) → http://localhost:8000
-uv run uvicorn app.main:app --reload
+# run the streaming API (mock LLM by default — no key needed) — task 0009
+uv run uvicorn app.api:app --reload
+# frontend dev server (task 0010): cd frontend && pnpm dev
 
 # quality gates (all four must pass)
 uv run pytest

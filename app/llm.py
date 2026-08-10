@@ -17,9 +17,40 @@ from typing import Any, Protocol
 
 from app.config import Settings, get_settings
 from app.corpus import EXAMPLES
-from app.prompts import GENERAL_ANSWER
+from app.prompts import GENERAL_ANSWER_EN, GENERAL_ANSWER_ES
 
 _TOKEN_RE = re.compile(r"[a-z0-9_]+")
+
+# Non-accented language markers (accented text is detected directly). Ambiguous words are omitted.
+_ES_WORD_TEXT = (
+    "chofer choferes ruta rutas planillas planilla gastos gasto viajes viaje liquidaciones recibo "
+    "recibos peso producto productos mes cada por con sin del ingresos impagas pendiente cobrar "
+    "facturacion"
+)
+_EN_WORD_TEXT = (
+    "how many much route routes driver drivers revenue shipments shipment billing expenses expense "
+    "receipt weight product products month monthly freight unpaid pending payrolls settlements "
+    "split"
+)
+_ES_WORDS = frozenset(_ES_WORD_TEXT.split())
+_EN_WORDS = frozenset(_EN_WORD_TEXT.split())
+
+_ANSWER_PREAMBLE = {
+    "es": "Según la base de datos, estos son los resultados:",
+    "en": "Based on the database, here are the results:",
+}
+_GENERAL_ANSWER = {"es": GENERAL_ANSWER_ES, "en": GENERAL_ANSWER_EN}
+
+
+def _detect_lang(text: str) -> str:
+    lowered = text.lower()
+    if any(ch in lowered for ch in "áéíóúñ¿¡"):
+        return "es"
+    tokens = set(_TOKEN_RE.findall(lowered))
+    es_hits, en_hits = len(tokens & _ES_WORDS), len(tokens & _EN_WORDS)
+    if es_hits == 0 and en_hits == 0:
+        return "es"  # domain default
+    return "es" if es_hits >= en_hits else "en"
 
 
 @dataclass(frozen=True, slots=True)
@@ -95,13 +126,14 @@ class MockProvider:
         question = _first_user_message(messages)
         made = _tool_calls_made(messages)
         sql, score = _match_example(question)
+        lang = _detect_lang(question)
 
         content: str | None
         tool_calls: list[ToolCall] = []
 
         if score == 0:
-            # Not a recognizable database question — answer directly.
-            content = GENERAL_ANSWER
+            # Not a recognizable database question — answer directly, in the question's language.
+            content = _GENERAL_ANSWER[lang]
         elif "search_schema" not in made:
             content = None
             tool_calls = [ToolCall("call_search", "search_schema", {"question": question})]
@@ -110,7 +142,7 @@ class MockProvider:
             tool_calls = [ToolCall("call_run", "run_sql", {"query": sql})]
         else:
             result = _last_tool_result(messages)
-            content = f"Según la base de datos, estos son los resultados:\n\n{result}"
+            content = f"{_ANSWER_PREAMBLE[lang]}\n\n{result}"
 
         prompt_tokens = max(1, sum(len(str(m.get("content") or "")) for m in messages) // 4)
         completion_tokens = (len(content) // 4 if content else 0) + (20 if tool_calls else 0)
