@@ -80,6 +80,7 @@ def introspect_from_settings() -> SchemaInfo:
         user=s.db_user,
         password=s.db_password,
         database=s.db_name,
+        charset="utf8mb4",
         connect_timeout=5,
     )
     try:

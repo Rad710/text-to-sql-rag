@@ -4,6 +4,7 @@
 -- Auto-applied on first MySQL boot via /docker-entrypoint-initdb.d.
 
 USE dyrtransportes;
+SET NAMES utf8mb4;
 
 SET FOREIGN_KEY_CHECKS = 0;
 

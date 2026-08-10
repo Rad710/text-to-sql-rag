@@ -55,9 +55,10 @@ class Settings:
     db_password: str = ""
     db_name: str = "dyrtransportes"
 
-    # Safety / agent limits (enforced in later tasks).
+    # Safety / agent limits.
     result_limit: int = 500
     agent_max_iterations: int = 6
+    statement_timeout_ms: int = 5000  # kills runaway queries (MySQL max_execution_time)
 
     # RAG store location (task 0005).
     chroma_path: str = ".chroma"
@@ -86,5 +87,6 @@ def get_settings() -> Settings:
         db_name=_get("DB_NAME", "dyrtransportes"),
         result_limit=_get_int("RESULT_LIMIT", 500),
         agent_max_iterations=_get_int("AGENT_MAX_ITERATIONS", 6),
+        statement_timeout_ms=_get_int("STATEMENT_TIMEOUT_MS", 5000),
         chroma_path=_get("CHROMA_PATH", ".chroma"),
     )

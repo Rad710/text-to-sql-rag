@@ -3,6 +3,7 @@
 -- questions always return rows. Auto-applied on first MySQL boot (runs after 01_schema.sql).
 
 USE dyrtransportes;
+SET NAMES utf8mb4;  -- interpret this file's accented literals (María, Díaz, Maíz…) as UTF-8
 
 -- Drivers (codes 1..4 by insertion order)
 INSERT INTO driver (driver_id, driver_name, driver_surname, truck_plate, trailer_plate, modification_user) VALUES

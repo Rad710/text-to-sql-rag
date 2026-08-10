@@ -28,7 +28,7 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 | [0005](0005-rag-corpus-seeding/) | RAG corpus (DDL + business-rule docs + Q→SQL examples) + idempotent content-hashed ChromaDB seeding | done | 0003 |
 | [0006](0006-retrieval-engine/) | Retrieval engine — 4-tier merge + relationship-following (pure + tested); backs `search_schema` | done | 0005 |
 | [0007](0007-llm-client/) | LLM client — OpenAI-compatible + mock provider (default) + prompts + tool schemas + per-call token/cost accounting | done | 0001 |
-| 0008 | Agentic orchestration — bounded tool-loop (`search_schema` + `run_sql`), intent + follow-up handling, and **execution-guided self-correction** (feed DB errors + empty/implausible results back for a repair pass), tested | proposed | 0004, 0006, 0007 |
+| [0008](0008-agentic-loop/) | Agentic orchestration — bounded tool-loop (`search_schema` + `run_sql`) + hardened execution + **execution-guided self-correction** (feed DB errors/empty results back for a repair pass), tested | done | 0004, 0006, 0007 |
 | 0009 | FastAPI endpoints + thin static chat UI (streaming) | proposed | 0008 |
 | 0010 | Full docker-compose + README + docs polish + `ai-workflow.md` finalization | proposed | 0009 |
 | 0011 | **Stretch:** standalone read-only SQL MCP server (schema-search + `run_sql` tools) over the synthetic DB | proposed | 0004, 0006 |
@@ -64,3 +64,6 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 - [0007](0007-llm-client/) — provider-agnostic LLM client (`app/llm.py`): deterministic `MockProvider`
   (default, drives the loop from history) + `OpenAIProvider` (lazy) + `app/prompts.py` (system prompt +
   tool schemas) + per-call token/cost accounting. 10 unit tests.
+- [0008](0008-agentic-loop/) — the bounded agentic loop (`app/agent.py`) + hardened `run_sql` execution
+  (`app/execution.py`: validator + LIMIT + read-only user + timeout + row cap) + native self-correction.
+  End-to-end works: NL question → search_schema → run_sql → answer. 5 unit + 6 integration tests.
