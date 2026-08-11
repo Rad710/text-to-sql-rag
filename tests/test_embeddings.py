@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 
-from app.embeddings import OfflineEmbedder
+from app.rag.embeddings import OfflineEmbedder
 
 
 def _dot(a: list[float], b: list[float]) -> float:

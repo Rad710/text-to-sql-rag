@@ -6,7 +6,7 @@ import re
 
 import pytest
 
-from app.limits import enforce_limit
+from app.safety.limits import enforce_limit
 
 
 def _limit_of(sql: str) -> int | None:

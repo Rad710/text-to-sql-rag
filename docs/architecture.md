@@ -26,27 +26,32 @@ Typical trace: `search_schema` (find the tables) → draft SQL → `run_sql` →
 message and **refine** → `run_sql` again → format the rows into an answer. Self-correction is native to the
 loop; there is no separate repair stage.
 
-## Modules (planned)
+## Modules
+
+Grouped into layered sub-packages by concern ([decision 0007](decisions/0007-layered-package-structure.md)).
 
 | Module | Responsibility | Purity |
 |---|---|---|
 | `app/config.py` | Frozen dataclass settings, env-driven, no DB/network on import | pure |
-| `app/validator.py` | `sqlglot` read-only validation (single SELECT, no DML/DDL, dialect=mysql) | **pure** |
-| `app/limits.py` | Enforce/clamp `LIMIT` by rewriting the AST | **pure** |
-| `app/introspect.py` | Read `information_schema` → `SchemaInfo` (live DB) | impure (lazy I/O) |
-| `app/schema.py` | Schema model + annotated DDL / join-annotation / summary rendering | **pure** |
-| `app/retrieval.py` | 4-tier candidate merge + table/join/keyword extraction | **pure** |
-| `app/embeddings.py` | Offline hashing embedder (mock/CI) + lazy real embedder | mixed |
-| `app/engine.py` | ChromaDB client, seed sync, `search_schema`, `run_sql` execution | impure (lazy I/O) |
-| `app/llm.py` | OpenAI-compatible client + **mock provider (default)**, tool schemas | impure (lazy) |
-| `app/agent.py` | The bounded tool-loop: dispatch tool calls, cap iterations, assemble answer | orchestration |
-| `app/mock.py` | Deterministic scripted tool-calls + canned answers for no-key runs | **pure** |
-| `app/main.py` | FastAPI app, chat endpoint (streaming), static chat page | impure |
+| `app/safety/validator.py` | `sqlglot` read-only validation (single SELECT, no DML/DDL, dialect=mysql) | **pure** |
+| `app/safety/limits.py` | Enforce/clamp `LIMIT` by rewriting the AST | **pure** |
+| `app/safety/execution.py` | Hardened `run_sql` (validate → LIMIT → read-only exec) + model-facing `format_result` | impure (lazy I/O) |
+| `app/rag/schema.py` | Schema model + annotated DDL / join-annotation / summary rendering | **pure** |
+| `app/rag/introspect.py` | Read `information_schema` → `SchemaInfo` (live DB) | impure (lazy I/O) |
+| `app/rag/corpus.py` | Build the RAG corpus (DDL + docs + Q→SQL examples) from `SchemaInfo` | **pure** |
+| `app/rag/retrieval.py` | 4-tier candidate merge + table/join/keyword extraction | **pure** |
+| `app/rag/embeddings.py` | Offline hashing embedder (mock/CI) + lazy real embedder | mixed |
+| `app/rag/engine.py` | ChromaDB client, seed sync, `search_schema` | impure (lazy I/O) |
+| `app/llm/client.py` | OpenAI-compatible client + **mock provider (default)**, per-call cost | impure (lazy) |
+| `app/llm/prompts.py` | System prompt + `search_schema`/`run_sql` tool schemas | **pure** |
+| `app/agent.py` | The bounded tool-loop: dispatch tool calls, cap iterations, stream events | orchestration |
+| `app/api.py` | FastAPI SSE `/chat` + `/health` | impure |
 
 **Pure/impure separation** ([decision 0001](decisions/0001-tech-stack.md)): everything security- or
-decision-critical (`validator`, `limits`, `retrieval`, `mock`) is stdlib/`sqlglot`-only and unit-tested
-with no DB, vector store, or model. Heavy deps (Chroma, the MySQL driver, the OpenAI client) are imported
-lazily inside the classes that need them, so CI stays fast and the pure logic is trivially testable.
+decision-critical (`safety/validator`, `safety/limits`, `rag/retrieval`, the mock provider) is
+stdlib/`sqlglot`-only and unit-tested with no DB, vector store, or model. Heavy deps (Chroma, the MySQL
+driver, the OpenAI client) are imported lazily inside the functions that need them, so CI stays fast and
+the pure logic is trivially testable.
 
 ## RAG (the `search_schema` tool)
 

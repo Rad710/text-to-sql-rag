@@ -16,12 +16,12 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from app.config import Settings, get_settings
-from app.engine import RagStore
-from app.execution import RunResult, format_result
-from app.execution import run_sql as execute_sql
-from app.llm import ZERO_USAGE, LlmProvider, LlmResponse, Usage, get_llm
-from app.prompts import SYSTEM_PROMPT, TOOLS
-from app.schema import SchemaInfo
+from app.llm.client import ZERO_USAGE, LlmProvider, LlmResponse, Usage, get_llm
+from app.llm.prompts import SYSTEM_PROMPT, TOOLS
+from app.rag.engine import RagStore
+from app.rag.schema import SchemaInfo
+from app.safety.execution import RunResult, format_result
+from app.safety.execution import run_sql as execute_sql
 
 _FALLBACK = "No pude generar una respuesta."
 _EXHAUSTED = "No pude completar la consulta dentro del número de pasos permitido."

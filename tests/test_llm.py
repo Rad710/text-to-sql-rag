@@ -6,7 +6,7 @@ import json
 from typing import Any
 
 from app.config import Settings
-from app.llm import (
+from app.llm.client import (
     MockProvider,
     OpenAIProvider,
     Usage,
@@ -14,8 +14,8 @@ from app.llm import (
     _estimate_cost,
     get_llm,
 )
-from app.prompts import SYSTEM_PROMPT, TOOLS
-from app.validator import validate_read_only
+from app.llm.prompts import SYSTEM_PROMPT, TOOLS
+from app.safety.validator import validate_read_only
 
 SYS: dict[str, Any] = {"role": "system", "content": SYSTEM_PROMPT}
 mock = MockProvider()

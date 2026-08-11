@@ -14,8 +14,8 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from app.config import Settings, get_settings
-from app.limits import enforce_limit
-from app.validator import ValidationError, validate_read_only
+from app.safety.limits import enforce_limit
+from app.safety.validator import ValidationError, validate_read_only
 
 
 @dataclass(frozen=True, slots=True)

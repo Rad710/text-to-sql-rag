@@ -16,8 +16,8 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 
 from app.config import Settings, get_settings
-from app.corpus import EXAMPLES
-from app.prompts import GENERAL_ANSWER_EN, GENERAL_ANSWER_ES
+from app.llm.prompts import GENERAL_ANSWER_EN, GENERAL_ANSWER_ES
+from app.rag.corpus import EXAMPLES
 
 _TOKEN_RE = re.compile(r"[a-z0-9_]+")
 

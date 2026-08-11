@@ -23,10 +23,10 @@ def test_mock_execution_accuracy_is_100(tmp_path: Path) -> None:
     """In mock mode the gold set must score 100% — a pipeline + example-corpus regression guard."""
     import pymysql
 
-    from app.corpus import build_corpus
-    from app.embeddings import OfflineEmbedder
-    from app.engine import RagStore
-    from app.introspect import introspect_from_settings
+    from app.rag.corpus import build_corpus
+    from app.rag.embeddings import OfflineEmbedder
+    from app.rag.engine import RagStore
+    from app.rag.introspect import introspect_from_settings
 
     try:
         schema = introspect_from_settings()

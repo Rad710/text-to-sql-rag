@@ -11,7 +11,7 @@ from typing import Any
 import pymysql
 
 from app.config import get_settings
-from app.schema import Column, ForeignKey, SchemaInfo, Table
+from app.rag.schema import Column, ForeignKey, SchemaInfo, Table
 
 _COLUMNS_SQL = """
     SELECT table_name, column_name, column_type, is_nullable, column_key
@@ -90,6 +90,6 @@ def introspect_from_settings() -> SchemaInfo:
 
 
 if __name__ == "__main__":  # pragma: no cover - manual convenience
-    from app.schema import render_schema_ddl
+    from app.rag.schema import render_schema_ddl
 
     print(render_schema_ddl(introspect_from_settings()))

@@ -99,7 +99,10 @@ a test, don't remove the check.
   translate cleanly (`shipment`, `driver_payroll`, `flete`). User-facing answer text: Spanish.
 - **Style:** ruff (format + lint), 4-space indent. Type hints on public functions; mypy clean.
 - **Structure:** pure/impure split (above). Config as a frozen dataclass, env-driven, no DB/network on
-  import. One clear module per concern (`validator`, `retrieval`, `llm`, `agent`, `engine`, `mock`).
+  import. One clear module per concern, grouped into layered sub-packages
+  ([decision 0007](docs/decisions/0007-layered-package-structure.md)): `app/safety/` (validator, limits,
+  execution), `app/rag/` (schema, introspect, corpus, embeddings, engine, retrieval), `app/llm/` (client
+  + prompts); `app/agent.py`, `app/api.py`, `app/config.py` at the top.
 - **Errors:** raise typed exceptions; never leak raw SQL or stack traces to the end user.
 
 ## Build & dev commands

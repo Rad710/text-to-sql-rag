@@ -20,10 +20,10 @@ from pydantic import BaseModel
 from app import __version__
 from app.agent import AgentEvent, stream
 from app.config import get_settings
-from app.corpus import build_corpus
-from app.engine import RagStore
-from app.introspect import introspect_from_settings
-from app.schema import SchemaInfo
+from app.rag.corpus import build_corpus
+from app.rag.engine import RagStore
+from app.rag.introspect import introspect_from_settings
+from app.rag.schema import SchemaInfo
 
 app = FastAPI(title="text-to-sql-rag", version=__version__)
 app.add_middleware(

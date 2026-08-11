@@ -6,10 +6,10 @@ from pathlib import Path
 
 import pytest
 
-from app.corpus import build_corpus
-from app.embeddings import OfflineEmbedder
-from app.engine import RagStore
-from app.schema import Column, ForeignKey, SchemaInfo, Table
+from app.rag.corpus import build_corpus
+from app.rag.embeddings import OfflineEmbedder
+from app.rag.engine import RagStore
+from app.rag.schema import Column, ForeignKey, SchemaInfo, Table
 
 
 def _t(name: str, *cols: str, pk: str, fks: tuple[ForeignKey, ...] = ()) -> Table:
@@ -72,7 +72,7 @@ def test_relationship_following_surfaces_unnamed_table(tmp_path: Path) -> None:
 def test_search_against_live_schema(tmp_path: Path) -> None:
     import pymysql
 
-    from app.introspect import introspect_from_settings
+    from app.rag.introspect import introspect_from_settings
 
     try:
         schema = introspect_from_settings()

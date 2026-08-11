@@ -7,8 +7,8 @@ from typing import Any
 import pytest
 
 from app.agent import _EXHAUSTED, AgentTools, answer_question, stream_answer
-from app.execution import RunResult
-from app.llm import LlmResponse, ToolCall, Usage
+from app.llm.client import LlmResponse, ToolCall, Usage
+from app.safety.execution import RunResult
 
 
 class StubLLM:
@@ -160,10 +160,10 @@ def test_ask_end_to_end(tmp_path: Any) -> None:
     import pymysql
 
     from app.agent import ask
-    from app.corpus import build_corpus
-    from app.embeddings import OfflineEmbedder
-    from app.engine import RagStore
-    from app.introspect import introspect_from_settings
+    from app.rag.corpus import build_corpus
+    from app.rag.embeddings import OfflineEmbedder
+    from app.rag.engine import RagStore
+    from app.rag.introspect import introspect_from_settings
 
     try:
         schema = introspect_from_settings()

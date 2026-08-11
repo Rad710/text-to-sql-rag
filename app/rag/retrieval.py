@@ -21,7 +21,7 @@ import sqlglot
 from sqlglot import exp
 from sqlglot.errors import SqlglotError
 
-from app.schema import SchemaInfo
+from app.rag.schema import SchemaInfo
 
 _TOKEN_RE = re.compile(r"[a-z0-9_]+")
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.schema import (
+from app.rag.schema import (
     Column,
     ForeignKey,
     SchemaInfo,

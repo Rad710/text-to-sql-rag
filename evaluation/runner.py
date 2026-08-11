@@ -13,10 +13,10 @@ from typing import Any
 
 from app.agent import ask
 from app.config import Settings, get_settings
-from app.engine import RagStore
-from app.execution import run_sql
-from app.llm import LlmProvider
-from app.schema import SchemaInfo
+from app.llm.client import LlmProvider
+from app.rag.engine import RagStore
+from app.rag.schema import SchemaInfo
+from app.safety.execution import run_sql
 from evaluation.cases import GOLD_CASES, EvalCase
 
 RowMultiset = Counter[tuple[str, ...]]
@@ -98,9 +98,9 @@ def format_report(report: EvalReport) -> str:
 
 
 def main() -> None:  # pragma: no cover - manual/CLI convenience
-    from app.corpus import build_corpus
-    from app.engine import RagStore
-    from app.introspect import introspect_from_settings
+    from app.rag.corpus import build_corpus
+    from app.rag.engine import RagStore
+    from app.rag.introspect import introspect_from_settings
 
     settings = get_settings()
     schema = introspect_from_settings()

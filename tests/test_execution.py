@@ -7,7 +7,7 @@ import dataclasses
 import pytest
 
 from app.config import get_settings
-from app.execution import format_result, run_sql
+from app.safety.execution import format_result, run_sql
 
 pytestmark = pytest.mark.integration
 

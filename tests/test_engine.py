@@ -6,10 +6,10 @@ from pathlib import Path
 
 import pytest
 
-from app.corpus import DOCS, EXAMPLES, build_corpus
-from app.embeddings import OfflineEmbedder
-from app.engine import RagStore
-from app.schema import Column, ForeignKey, SchemaInfo, Table
+from app.rag.corpus import DOCS, EXAMPLES, build_corpus
+from app.rag.embeddings import OfflineEmbedder
+from app.rag.engine import RagStore
+from app.rag.schema import Column, ForeignKey, SchemaInfo, Table
 
 DRIVER = Table(
     name="driver",
@@ -75,7 +75,7 @@ def test_seed_from_live_introspected_schema(tmp_path: Path) -> None:
     """The full pipeline: introspect the live DB → build corpus → seed → query."""
     import pymysql
 
-    from app.introspect import introspect_from_settings
+    from app.rag.introspect import introspect_from_settings
 
     try:
         schema = introspect_from_settings()

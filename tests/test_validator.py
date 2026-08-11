@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.validator import ValidationError, validate_read_only
+from app.safety.validator import ValidationError, validate_read_only
 
 ALLOWED = [
     "SELECT 1",

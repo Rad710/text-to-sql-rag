@@ -13,16 +13,16 @@ from dataclasses import dataclass
 from typing import Any
 
 from app.config import get_settings
-from app.corpus import COLLECTIONS, CorpusItem
-from app.embeddings import Embedder, get_embedder
-from app.retrieval import (
+from app.rag.corpus import COLLECTIONS, CorpusItem
+from app.rag.embeddings import Embedder, get_embedder
+from app.rag.retrieval import (
     RetrievedContext,
     extract_tables_from_sql,
     follow_relationships,
     keyword_tables,
     merge_candidates,
 )
-from app.schema import SchemaInfo, render_table_ddl, render_table_summary
+from app.rag.schema import SchemaInfo, render_table_ddl, render_table_summary
 
 
 def _dedupe(names: list[str]) -> list[str]:

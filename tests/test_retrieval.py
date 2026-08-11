@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from app.retrieval import (
+from app.rag.retrieval import (
     RetrievedContext,
     extract_tables_from_sql,
     follow_relationships,
     keyword_tables,
     merge_candidates,
 )
-from app.schema import Column, ForeignKey, SchemaInfo, Table
+from app.rag.schema import Column, ForeignKey, SchemaInfo, Table
 
 
 def _t(name: str, *cols: str, pk: str | None = None, fks: tuple[ForeignKey, ...] = ()) -> Table:

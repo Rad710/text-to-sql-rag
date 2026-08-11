@@ -15,7 +15,7 @@ from __future__ import annotations
 import hashlib
 from dataclasses import dataclass
 
-from app.schema import SchemaInfo, render_table_ddl, render_table_summary
+from app.rag.schema import SchemaInfo, render_table_ddl, render_table_summary
 
 COLLECTIONS = ("ddl", "documentation", "question_sql")
 

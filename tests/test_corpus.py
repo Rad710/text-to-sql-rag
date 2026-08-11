@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from app.corpus import COLLECTIONS, DOCS, EXAMPLES, build_corpus
-from app.schema import Column, ForeignKey, SchemaInfo, Table
-from app.validator import validate_read_only
+from app.rag.corpus import COLLECTIONS, DOCS, EXAMPLES, build_corpus
+from app.rag.schema import Column, ForeignKey, SchemaInfo, Table
+from app.safety.validator import validate_read_only
 
 DRIVER = Table(
     name="driver",

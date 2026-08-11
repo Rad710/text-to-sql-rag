@@ -12,8 +12,8 @@ import pymysql
 import pytest
 
 from app.config import get_settings
-from app.introspect import introspect
-from app.schema import render_schema_ddl
+from app.rag.introspect import introspect
+from app.rag.schema import render_schema_ddl
 
 pytestmark = pytest.mark.integration
 
