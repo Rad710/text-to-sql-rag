@@ -37,7 +37,11 @@ export async function login(email: string, password: string): Promise<void> {
 export async function register(email: string, name: string, password: string): Promise<void> {
   const res = await postAuth("/auth/register", { email, name, password });
   if (!res.ok) {
-    throw new Error(res.status === 409 ? "Ese email ya está registrado" : `Error ${res.status}`);
+    if (res.status === 409) throw new Error("Ese email ya está registrado");
+    // 422 = the API rejected the email format or the password length (min 8).
+    if (res.status === 422)
+      throw new Error("Revisá el email y que la contraseña tenga al menos 8 caracteres");
+    throw new Error(`Error ${res.status}`);
   }
   setToken(((await res.json()) as { access_token: string }).access_token);
 }

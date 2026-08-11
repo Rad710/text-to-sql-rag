@@ -41,6 +41,32 @@ def test_jwt_rejects_wrong_secret() -> None:
         decode_token(token, Settings(jwt_secret=_SECRET_B))
 
 
+def test_register_rejects_invalid_input() -> None:
+    """Register validates at the edge (422) before the DB is touched — a bad body never reaches the
+    store. Validation runs before the endpoint, so no session is needed (get_session is stubbed)."""
+    from collections.abc import AsyncIterator
+
+    from fastapi.testclient import TestClient
+
+    from app.api import app
+    from app.store.engine import get_session
+
+    async def _no_session() -> AsyncIterator[None]:
+        yield None  # never used — a 422 short-circuits before the endpoint body runs
+
+    app.dependency_overrides[get_session] = _no_session
+    try:
+        c = TestClient(app)
+        good = {"email": "ok@example.com", "name": "Ok", "password": "longenough1"}
+        assert c.post("/auth/register", json={**good, "email": "notanemail"}).status_code == 422
+        assert c.post("/auth/register", json={**good, "password": "short"}).status_code == 422
+        assert c.post("/auth/register", json={**good, "name": ""}).status_code == 422
+        bad_login = c.post("/auth/login", json={"email": "notanemail", "password": "x"})
+        assert bad_login.status_code == 422  # login email is validated too
+    finally:
+        app.dependency_overrides.clear()
+
+
 @pytest.mark.integration
 def test_register_login_me_flow() -> None:
     import os
@@ -54,7 +80,7 @@ def test_register_login_me_flow() -> None:
     from app.store.models import Base
 
     url = os.environ.get("APP_DATABASE_URL", "postgresql+asyncpg://app:app@localhost:5432/dyr_app")
-    email = f"user-{uuid.uuid4()}@dyr.test"
+    email = f"user-{uuid.uuid4()}@example.com"
 
     async def flow() -> None:
         # Create the schema, then drive the ASGI app in this one loop, so the app's async engine and
@@ -67,20 +93,20 @@ def test_register_login_me_flow() -> None:
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as ac:
             reg = await ac.post(
-                "/auth/register", json={"email": email, "name": "Ana", "password": "s3cret!"}
+                "/auth/register", json={"email": email, "name": "Ana", "password": "s3cret!pw"}
             )
             assert reg.status_code == 201 and reg.json()["access_token"]
 
             dup = await ac.post(
-                "/auth/register", json={"email": email, "name": "Ana", "password": "x"}
+                "/auth/register", json={"email": email, "name": "Ana", "password": "s3cret!pw"}
             )
             assert dup.status_code == 409  # email already registered
 
-            login = await ac.post("/auth/login", json={"email": email, "password": "s3cret!"})
+            login = await ac.post("/auth/login", json={"email": email, "password": "s3cret!pw"})
             assert login.status_code == 200
             token = login.json()["access_token"]
 
-            bad = await ac.post("/auth/login", json={"email": email, "password": "nope"})
+            bad = await ac.post("/auth/login", json={"email": email, "password": "nopenope1"})
             assert bad.status_code == 401
 
             me = await ac.get("/auth/me", headers={"Authorization": f"Bearer {token}"})

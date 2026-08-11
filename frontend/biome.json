@@ -2,7 +2,15 @@
   "$schema": "https://biomejs.dev/schemas/2.5.8/schema.json",
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!**/node_modules", "!dist", "!src/index.css"]
+    "includes": [
+      "**",
+      "!**/node_modules",
+      "!dist",
+      "!src/index.css",
+      "!test-results",
+      "!playwright-report",
+      "!blob-report"
+    ]
   },
   "formatter": {
     "enabled": true,

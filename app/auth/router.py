@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import service
@@ -20,13 +20,15 @@ Session = Annotated[AsyncSession, Depends(get_session)]
 
 
 class RegisterRequest(BaseModel):
-    email: str
-    name: str
-    password: str
+    # Validated at the edge so bad data never reaches the store: a well-formed email, a non-empty
+    # name, and a long-enough password (rejected as 422 before the endpoint runs).
+    email: EmailStr
+    name: str = Field(min_length=1, max_length=100)
+    password: str = Field(min_length=8, max_length=128)
 
 
 class LoginRequest(BaseModel):
-    email: str
+    email: EmailStr
     password: str
 
 

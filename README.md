@@ -147,6 +147,16 @@ uv run pre-commit run --all-files  # run them on demand across the repo
 
 CI's quality job also reports test coverage (`pytest --cov`) and fails under an 80% floor.
 
+**End-to-end tests** (Playwright, `frontend/e2e/`) drive a real browser through the whole journey —
+register → ask → tool steps + result table + chart → feedback → multi-turn → re-login restores history —
+against a live stack. CI runs them on every push (the `e2e` job boots MySQL + Postgres + the API in mock
+mode). To run locally, start the stack (API on `:8000` + the databases), then:
+
+```bash
+cd frontend && pnpm exec playwright install chromium   # one-time
+pnpm e2e                                                # starts Vite and runs the specs
+```
+
 ## License
 
 MIT — see [`LICENSE`](LICENSE) (added in task 0001).

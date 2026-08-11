@@ -55,8 +55,8 @@ def test_chat_persists_and_history_is_isolated_per_user() -> None:
                 assert r.status_code == 201
                 return str(r.json()["access_token"])
 
-            auth_a = {"Authorization": f"Bearer {await token_for(f'a-{uuid.uuid4()}@dyr.test')}"}
-            auth_b = {"Authorization": f"Bearer {await token_for(f'b-{uuid.uuid4()}@dyr.test')}"}
+            auth_a = {"Authorization": f"Bearer {await token_for(f'a-{uuid.uuid4()}@example.com')}"}
+            auth_b = {"Authorization": f"Bearer {await token_for(f'b-{uuid.uuid4()}@example.com')}"}
 
             chat = await ac.post(
                 "/chat", json={"question": "facturación total por ruta"}, headers=auth_a

@@ -20,6 +20,7 @@ dependencies = [
     # Auth (decision 0009): JWT bearer tokens + bcrypt password hashing.
     "pyjwt>=2.9",
     "bcrypt>=4.2",
+    "email-validator>=2.2",  # pydantic EmailStr — validates the register/login email format
 ]
 
 # Opt-in extra for a real transformer embedder (deferred; offline embedder is the default):

@@ -43,6 +43,7 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 | [0021](0021-result-charts/) | **Result charts** — render a bar/line (**Recharts**) when the query result shape fits | done | 0010 |
 | [0022](0022-rate-limiting-deploy-modes/) | **Rate limiting + deploy modes** — per-**user** limit on `/chat` + `DEPLOY_MODE` config for the two flavors (demo · live) ([decision 0010](../decisions/0010-rate-limiting-deploy-modes.md)) | done | 0009, 0015 |
 | [0014](0014-deploy-live/) | **Deploy live** (the showcase must be clickable) — production docker-compose (nginx SPA+proxy + API + MySQL + Postgres), `DEPLOY.md` runbook, README Deploy section. Artifacts built + locally verified; owner does the VM/DNS/TLS + hosted URL | done | 0010, 0018, 0022 |
+| [0023](0023-e2e-test-hardening/) | **Thorough test pass + Playwright e2e + hardening** — full manual pass, register input-validation fix (422 + UI message), a browser e2e suite wired into CI | done | 0014 |
 
 ## Backlog — open, unscheduled
 
@@ -102,6 +103,13 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 - [0020](0020-feedback/) — **feedback 👍/👎**: `POST /feedback` (owner-checked upsert, one per message);
   `/chat` emits the assistant message id + `GET /conversations/{id}` carries ids; thumbs in the action bar
   (idiomatic assistant-ui `FeedbackAdapter`) POST it. Integration + browser-verified (row in Postgres).
+- [0023](0023-e2e-test-hardening/) — **e2e + test hardening**: a thorough exploratory pass (API sweep +
+  browser) confirmed the backend solid (auth, cross-user isolation → 404, feedback upsert, multi-turn,
+  history reload); fixed the two gaps it found — register now rejects an invalid email + a <8-char
+  password (`422`, surfaced in the UI: EmailStr + Field). A **Playwright** suite (`frontend/e2e/`) drives
+  the full browser journey (register → ask → table/chart → feedback → multi-turn → re-login restores
+  history) + the validation error, **wired into CI** (a new `e2e` job: MySQL + Postgres + mock API +
+  chromium). vitest scoped to `src`; backend register-validation unit test.
 - [0011](0011-sql-mcp-server/) — **SQL MCP server** (stretch): `app/mcp_server.py` exposes `search_schema`
   + `run_sql` as Model-Context-Protocol tools over the synthetic DB, reusing the safety + RAG layers
   verbatim (decision 0003 holds through the adapter). Both transports — stdio default + `--http`

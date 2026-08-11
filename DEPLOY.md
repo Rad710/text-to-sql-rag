@@ -114,3 +114,12 @@ docker compose -f docker-compose.prod.yml exec postgres pg_dump -U app dyr_app >
 
 Data lives in the named volumes `pgdata` (app store) and `mysqldata` (synthetic DB — reproducible from
 `db/init`, so not critical to back up).
+
+## 7. SQL MCP server (optional)
+
+The standalone MCP server (`app/mcp_server.py`, README "SQL MCP server") is a separate, optional tool —
+it is **not** part of this compose stack. Its default **stdio** transport is the safe local mode (a
+client launches it as a subprocess; no network surface). If you run the **`--http`** transport, treat it
+like the API: it exposes read-only SQL execution over the network, so bind it to localhost or put
+auth/TLS in front before exposing it publicly. The SQL-safety layer still blocks writes either way, but
+HTTP without a proxy is an open query surface.
