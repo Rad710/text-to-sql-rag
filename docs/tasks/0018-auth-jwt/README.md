@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 updated: 2026-08-11
 depends_on: [0017, 0010]
 decision: [0009]
@@ -27,13 +27,13 @@ register/authenticate over the store), `router.py` (`POST /auth/register`, `POST
 `/chat`, logout; gate the Thread behind auth; tests + browser verification.
 
 ## Done when
-- [ ] `POST /auth/register` + `POST /auth/login` issue a JWT; passwords bcrypt-hashed; `GET /auth/me`
+- [x] `POST /auth/register` + `POST /auth/login` issue a JWT; passwords bcrypt-hashed; `GET /auth/me`
       returns the current user; `/chat` is 401 without a valid token, 200 with.
-- [ ] Secrets from env; unit tests (hash round-trip, JWT round-trip, `/chat` 401) + an integration test
-      (register → login → me) green; `ruff`/`mypy`/`pytest` green.
-- [ ] Frontend login/register + Bearer header + logout; the chat is reachable only when authenticated;
-      tests + browser-verified.
-- [ ] Committed.
+- [x] Secrets from env; unit tests (hash round-trip, JWT round-trip, `/chat` 401) + an integration test
+      (register → login → me) green; `ruff`/`mypy` (strict)/`pytest` green (112 unit).
+- [x] Frontend login/register + Bearer header + logout; the chat is reachable only when authenticated;
+      Biome + vitest green; **browser-verified** (register → authenticated query streams → logout → login).
+- [x] Committed.
 
 ---
 Log → [`discussion.md`](discussion.md)

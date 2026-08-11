@@ -5,6 +5,8 @@ import type {
   ToolCallMessagePart,
 } from "@assistant-ui/react";
 
+import { getToken } from "./auth";
+
 /** Join a message's text parts (ignoring tool-call/other parts) into a plain string. */
 function messageText(message: ThreadMessage): string {
   return message.content
@@ -65,9 +67,13 @@ export const adapter: ChatModelAdapter = {
       }))
       .filter((turn) => turn.content);
 
+    const token = getToken();
     const res = await fetch("/chat", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       body: JSON.stringify({ question, history }),
       signal: abortSignal,
     });

@@ -1,9 +1,12 @@
 import { AssistantRuntimeProvider, ThreadPrimitive, useLocalRuntime } from "@assistant-ui/react";
-import type { FC } from "react";
+import { type FC, useEffect, useState } from "react";
+
 import { Thread } from "@/components/assistant-ui/thread";
 import { OpenToolGroup, ToolRenderer } from "@/components/run-sql-tool";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
+import { type AuthUser, clearToken, fetchMe } from "./auth";
+import { LoginScreen } from "./LoginScreen";
 import { adapter } from "./runtime";
 
 const SUGGESTIONS = [
@@ -39,13 +42,49 @@ const Welcome: FC = () => (
 
 export default function App() {
   const runtime = useLocalRuntime(adapter);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchMe().then((u) => {
+      setUser(u);
+      setLoading(false);
+    });
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
+        Cargando…
+      </div>
+    );
+  }
+  if (!user) {
+    return <LoginScreen onAuthed={() => fetchMe().then(setUser)} />;
+  }
+
   return (
     <AssistantRuntimeProvider runtime={runtime}>
       <TooltipProvider>
         <div className="flex h-full flex-col">
-          <header className="border-border flex items-baseline gap-3 border-b px-6 py-3.5">
-            <span className="font-semibold">🚚 DYR Transportes — Data Assistant</span>
-            <span className="text-muted-foreground text-xs">text-to-SQL · RAG · mock mode</span>
+          <header className="border-border flex items-center justify-between gap-3 border-b px-6 py-3.5">
+            <div className="flex items-baseline gap-3">
+              <span className="font-semibold">🚚 DYR Transportes — Data Assistant</span>
+              <span className="text-muted-foreground text-xs">text-to-SQL · RAG · mock mode</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-muted-foreground text-xs">{user.name}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  clearToken();
+                  setUser(null);
+                }}
+                className="text-muted-foreground hover:text-foreground text-xs underline underline-offset-2"
+              >
+                Salir
+              </button>
+            </div>
           </header>
           <div className="min-h-0 flex-1">
             <Thread
