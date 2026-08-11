@@ -74,6 +74,7 @@ jobs:
       DB_USER: llm_readonly
       DB_PASSWORD: ci-readonly-pw
       DB_NAME: dyrtransportes
+      APP_DATABASE_URL: postgresql+asyncpg://app:ci-app-pw@127.0.0.1:5432/dyr_app
     services:
       mysql:
         image: mysql:8.4
@@ -84,6 +85,19 @@ jobs:
           - 3306:3306
         options: >-
           --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pci-root-pw"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: ci-app-pw
+          POSTGRES_DB: dyr_app
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U app -d dyr_app"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=10
@@ -106,5 +120,8 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
-      - name: Integration tests (live MySQL, read-only guarantee)
+      - name: Migrate the app datastore (Alembic → Postgres)
+        run: uv run alembic upgrade head
+
+      - name: Integration tests (live MySQL read-only guarantee + Postgres round-trip)
         run: uv run pytest -m integration

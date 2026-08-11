@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 updated: 2026-08-11
 depends_on: [0001]
 decision: [0008]
@@ -30,12 +30,15 @@ migration off the models' metadata); an integration test that round-trips agains
 Postgres service in the CI integration job; `.env`/README notes.
 
 ## Done when
-- [ ] Deps pinned; `APP_DATABASE_URL` in config; Postgres in docker-compose (separate from MySQL).
-- [ ] `app/store/models.py` defines the four tables; `app/store/engine.py` gives an async session; the
+- [x] Deps pinned; `APP_DATABASE_URL` in config; `postgres:17` in docker-compose (separate from MySQL,
+      own volume + healthcheck).
+- [x] `app/store/models.py` defines the four tables; `app/store/engine.py` gives a lazy async session; the
       pure core does not import the store.
-- [ ] Alembic initial migration creates the schema; an integration test round-trips (insert → query) a
-      user + conversation + message + feedback against a live Postgres; CI runs it.
-- [ ] `ruff`/`mypy`/`pytest` green (unit DB-free; integration opt-in like the MySQL suite). Committed.
+- [x] Alembic initial migration (`675aaf3ef12a`) creates the schema; an integration test round-trips
+      (insert → query) user + conversation + message + feedback against a live Postgres; the CI integration
+      job runs a Postgres service + `alembic upgrade head` + the test.
+- [x] `ruff`/`mypy` (strict) / `pytest` green (108 unit DB-free; the round-trip opt-in via `-m integration`,
+      verified locally against a throwaway `postgres:17`). Committed.
 
 ---
 Log → [`discussion.md`](discussion.md)

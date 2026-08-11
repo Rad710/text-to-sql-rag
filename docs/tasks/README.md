@@ -36,7 +36,7 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 | 0013 | Dev-experience polish — `.pre-commit-config.yaml` (ruff + ruff-format + mypy) + coverage reporting (`pytest-cov`) in CI | proposed | 0001 |
 | [0015](0015-real-llm-config/) | **Real-LLM config** — point the OpenAI-compatible client at a local **Ollama/vLLM** endpoint (base URL / model / optional key) via env; mock stays the default; verify + document | done | 0007, 0009 |
 | [0016](0016-multi-turn/) | **Multi-turn conversation** — thread conversation history through `/chat` + the agent loop + the frontend adapter (follow-ups get context) | done | 0009, 0010 |
-| [0017](0017-app-persistence-foundation/) | **App persistence foundation** — a separate **Postgres** service + SQLAlchemy (async) + Alembic; schema for `users` / `conversations` / `messages` / `feedback` ([decision 0008](../decisions/0008-app-datastore-postgres.md)) | in-progress | 0001 |
+| [0017](0017-app-persistence-foundation/) | **App persistence foundation** — a separate **Postgres** service + SQLAlchemy (async) + Alembic; schema for `users` / `conversations` / `messages` / `feedback` ([decision 0008](../decisions/0008-app-datastore-postgres.md)) | done | 0001 |
 | 0018 | **Auth (JWT)** — register/login, bcrypt password hashing, signed JWT, protected `/chat`, React login UI ([decision 0009](../decisions/0009-auth-jwt.md)) | proposed | 0017, 0010 |
 | 0019 | **Conversation history + thread-list UI** — persist conversations/messages and reload them (backed by 0017; the UI thread list) | proposed | 0016, 0017 |
 | 0020 | **Feedback 👍/👎 (persisted)** — thumbs on answers saved to the `feedback` table (feeds the few-shot-curation idea) | proposed | 0017, 0010 |
@@ -89,6 +89,10 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 - [0016](0016-multi-turn/) — **multi-turn**: `/chat` carries `history` (a `Turn` list), threaded through the
   agent loop (`[system, *history, question]`); mock keys off the latest turn; the frontend sends prior turns
   (footer stripped). Browser-verified (turn 2's POST carries clean context). 104 backend tests.
+- [0017](0017-app-persistence-foundation/) — **app persistence foundation**: a separate **Postgres 17**
+  service + async **SQLAlchemy 2.0** (`app/store/`: `User`/`Conversation`/`Message`/`Feedback` + lazy async
+  engine) + **Alembic** (initial migration). Pure metadata tests + an opt-in live round-trip; CI runs a
+  Postgres service + `alembic upgrade head`. The writable store for auth/history/feedback (0018–0020).
 - [0012](0012-eval-harness/) — **evaluation harness** (`evaluation/`): 8 gold cases + an execution-accuracy
   runner (result-set compare, not string match) → **8/8 = 100%** mock accuracy, wired into CI; plus
   `docs/failure-modes.md`. The headline "how well / where it breaks" artifact. 2 unit + 1 integration test.
