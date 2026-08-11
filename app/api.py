@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterator
-from typing import Literal
+from typing import Annotated, Literal
 
 import pymysql
 from fastapi import Depends, FastAPI, HTTPException
@@ -20,11 +20,14 @@ from pydantic import BaseModel
 
 from app import __version__
 from app.agent import AgentEvent, stream
+from app.auth.deps import get_current_user
+from app.auth.router import router as auth_router
 from app.config import get_settings
 from app.rag.corpus import build_corpus
 from app.rag.engine import RagStore
 from app.rag.introspect import introspect_from_settings
 from app.rag.schema import SchemaInfo
+from app.store.models import User
 
 app = FastAPI(title="text-to-sql-rag", version=__version__)
 app.add_middleware(
@@ -33,6 +36,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.include_router(auth_router)
 
 _service: tuple[RagStore, SchemaInfo] | None = None
 
@@ -79,9 +83,11 @@ def _sse(event: AgentEvent) -> str:
 
 @app.post("/chat")
 def chat(
-    req: ChatRequest, service: tuple[RagStore, SchemaInfo] = Depends(get_service)
+    req: ChatRequest,
+    user: Annotated[User, Depends(get_current_user)],
+    service: tuple[RagStore, SchemaInfo] = Depends(get_service),
 ) -> StreamingResponse:
-    """Answer a question, streaming the agent's events as Server-Sent Events."""
+    """Answer a question, streaming the agent's events as SSE. Requires a valid JWT (0009)."""
     store, schema = service
 
     history = [turn.model_dump() for turn in req.history]

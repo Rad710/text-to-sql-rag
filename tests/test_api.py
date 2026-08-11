@@ -9,10 +9,12 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.api import app, get_service
+from app.auth.deps import get_current_user
 from app.rag.corpus import build_corpus
 from app.rag.embeddings import OfflineEmbedder
 from app.rag.engine import RagStore
 from app.rag.schema import Column, ForeignKey, SchemaInfo, Table
+from app.store.models import User
 
 
 def _t(name: str, *cols: str, pk: str, fks: tuple[ForeignKey, ...] = ()) -> Table:
@@ -42,6 +44,10 @@ def client(tmp_path: Path) -> Iterator[TestClient]:
     store = RagStore(path=str(tmp_path), embedder=OfflineEmbedder())
     store.sync_corpus(build_corpus(SCHEMA))
     app.dependency_overrides[get_service] = lambda: (store, SCHEMA)
+    # Authenticated by default: bypass the JWT dependency with a stub user (0018).
+    app.dependency_overrides[get_current_user] = lambda: User(
+        id="u1", email="tester@dyr.test", name="Tester", password_hash="x"
+    )
     yield TestClient(app)
     app.dependency_overrides.clear()
 
@@ -88,6 +94,18 @@ def test_chat_rejects_bad_history_role(client: TestClient) -> None:
         json={"question": "x", "history": [{"role": "robot", "content": "hi"}]},
     )
     assert resp.status_code == 422  # role must be user|assistant
+
+
+def test_chat_requires_auth(tmp_path: Path) -> None:
+    """Without the auth override, /chat needs a Bearer token — 401 otherwise (decision 0009)."""
+    store = RagStore(path=str(tmp_path), embedder=OfflineEmbedder())
+    store.sync_corpus(build_corpus(SCHEMA))
+    app.dependency_overrides[get_service] = lambda: (store, SCHEMA)
+    try:
+        resp = TestClient(app).post("/chat", json={"question": "total revenue per route"})
+        assert resp.status_code == 401
+    finally:
+        app.dependency_overrides.clear()
 
 
 @pytest.mark.integration

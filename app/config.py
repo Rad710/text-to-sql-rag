@@ -61,6 +61,11 @@ class Settings:
     # App datastore — a separate writable Postgres (decision 0008), async SQLAlchemy DSN.
     app_database_url: str = "postgresql+asyncpg://app:app@localhost:5432/dyr_app"
 
+    # Auth (decision 0009) — JWT signing. Secret MUST be overridden in any real deploy.
+    jwt_secret: str = "dev-insecure-secret-change-me-in-production-0123456789"
+    jwt_algorithm: str = "HS256"
+    jwt_expiry_min: int = 60 * 24  # 1 day
+
     # Safety / agent limits.
     result_limit: int = 500
     agent_max_iterations: int = 6
@@ -97,6 +102,9 @@ def get_settings() -> Settings:
         app_database_url=_get(
             "APP_DATABASE_URL", "postgresql+asyncpg://app:app@localhost:5432/dyr_app"
         ),
+        jwt_secret=_get("JWT_SECRET", "dev-insecure-change-me"),
+        jwt_algorithm=_get("JWT_ALGORITHM", "HS256"),
+        jwt_expiry_min=_get_int("JWT_EXPIRY_MIN", 60 * 24),
         result_limit=_get_int("RESULT_LIMIT", 500),
         agent_max_iterations=_get_int("AGENT_MAX_ITERATIONS", 6),
         statement_timeout_ms=_get_int("STATEMENT_TIMEOUT_MS", 5000),
