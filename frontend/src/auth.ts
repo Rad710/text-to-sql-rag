@@ -18,6 +18,24 @@ export function clearToken(): void {
   localStorage.removeItem(TOKEN_KEY);
 }
 
+/**
+ * True only when the JWT is definitely past its `exp`. Used to skip the `/auth/me` probe for an
+ * expired token — otherwise the browser logs a (harmless but noisy) 401 on every load for a returning
+ * user whose token lapsed. A token we can't parse returns `false`: we don't guess, we let the server
+ * decide (keeps the check conservative and unit-testable without a real JWT).
+ */
+export function isTokenExpired(token: string): boolean {
+  const payload = token.split(".")[1];
+  if (!payload) return false;
+  try {
+    const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
+    const exp = (JSON.parse(json) as { exp?: number }).exp;
+    return typeof exp === "number" && exp * 1000 <= Date.now();
+  } catch {
+    return false;
+  }
+}
+
 async function postAuth(path: string, body: Record<string, string>): Promise<Response> {
   return fetch(path, {
     method: "POST",
@@ -50,6 +68,11 @@ export async function register(email: string, name: string, password: string): P
 export async function fetchMe(): Promise<AuthUser | null> {
   const token = getToken();
   if (!token) return null;
+  // Skip the round-trip (and its console 401) if the token is already expired.
+  if (isTokenExpired(token)) {
+    clearToken();
+    return null;
+  }
   const res = await fetch("/auth/me", { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) {
     clearToken();

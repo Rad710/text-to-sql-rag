@@ -49,8 +49,12 @@ e2e suite into CI.
 - Fixed: register accepted an invalid email + a too-short password. Now `422`, surfaced in the UI.
 - Backend otherwise solid: auth, cross-user isolation (conversations + feedback → 404), feedback upsert,
   bad rating → 422, multi-turn persistence, logout/re-login reload — all correct.
-- Minor/cosmetic (not fixed): no favicon (a `404` on load) and a stale token logs a console `401` (the
-  expected auth fallback). Noted for a future polish; neither affects functionality.
+- Console polish (fixed): added an inline SVG favicon (data URI → no `/favicon.ico` 404), and `fetchMe`
+  now decodes the JWT `exp` and skips the `/auth/me` probe for an already-expired token (clears it and
+  shows login) — so a returning user with a lapsed token no longer triggers a console `401`. Browser-
+  verified: fresh load and expired-token reload both show **0 console errors** and no `/auth/me` request.
+  (A token that's invalid-but-unexpired still 401s server-side — rare in real use; the check stays
+  conservative and only skips on a parsed, past `exp`.)
 
 ---
 Log → [`discussion.md`](discussion.md)

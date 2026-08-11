@@ -32,3 +32,10 @@ Append-only. Newest at the bottom, each entry dated.
 - 2026-08-11: CI `e2e` job added (MySQL + Postgres services, seed + alembic, uv + pnpm, `playwright
   install --with-deps chromium`, start uvicorn mock in background, `pnpm e2e`). Verified locally: e2e 2/2,
   backend 128 unit + 22 integration green, coverage 86%, frontend lint/build/vitest green, ruff/mypy clean.
+- 2026-08-11: Console polish (owner: "do it"). Added an inline SVG favicon (🚚 data URI in index.html)
+  so there's no `/favicon.ico` 404, and taught `fetchMe` to decode the JWT `exp` and short-circuit
+  (clear token → login, no fetch) when it's already expired — killing the console `401` a returning user
+  with a lapsed token used to see. Kept it conservative: an unparseable token returns `isTokenExpired
+  → false` so the server still decides (and App.test's non-JWT "tok-abc" keeps working). Unit tests in
+  `auth.test.ts`; browser-verified 0 console errors on both a fresh load and an expired-token reload
+  (no `/auth/me` request). Frontend: 4 test files / 21 tests, lint + build green.
