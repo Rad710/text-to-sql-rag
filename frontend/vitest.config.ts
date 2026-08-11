@@ -1,5 +1,5 @@
-import react from "@vitejs/plugin-react";
 import path from "node:path";
+import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
 // Vitest runs the component tests in jsdom so <App /> actually mounts — the assistant-ui

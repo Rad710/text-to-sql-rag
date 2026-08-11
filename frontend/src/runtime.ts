@@ -16,8 +16,9 @@ async function* parseSSE(body: ReadableStream<Uint8Array>): AsyncGenerator<SSEEv
     const { done, value } = await reader.read();
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
-    let sep: number;
-    while ((sep = buffer.indexOf("\n\n")) !== -1) {
+    for (;;) {
+      const sep = buffer.indexOf("\n\n");
+      if (sep === -1) break;
       const frame = buffer.slice(0, sep);
       buffer = buffer.slice(sep + 2);
       let event = "message";

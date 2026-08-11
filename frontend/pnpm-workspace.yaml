@@ -1,10 +1,21 @@
 allowBuilds:
   esbuild: true
   '@tailwindcss/oxide': true
+  '@biomejs/biome': true
 minimumReleaseAgeExclude:
   - '@testing-library/jest-dom@7.0.1'
-# Allow esbuild (Vite) and Tailwind v4's oxide engine to run their install scripts to
+  - '@biomejs/biome@2.5.8'
+  - '@biomejs/cli-darwin-arm64@2.5.8'
+  - '@biomejs/cli-darwin-x64@2.5.8'
+  - '@biomejs/cli-linux-arm64-musl@2.5.8'
+  - '@biomejs/cli-linux-arm64@2.5.8'
+  - '@biomejs/cli-linux-x64-musl@2.5.8'
+  - '@biomejs/cli-linux-x64@2.5.8'
+  - '@biomejs/cli-win32-arm64@2.5.8'
+  - '@biomejs/cli-win32-x64@2.5.8'
+# Allow esbuild (Vite), Tailwind v4's oxide engine, and Biome to run their install scripts to
 # fetch native binaries.
 onlyBuiltDependencies:
   - esbuild
   - '@tailwindcss/oxide'
+  - '@biomejs/biome'

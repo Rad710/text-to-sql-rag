@@ -1,8 +1,7 @@
 import { AssistantRuntimeProvider, ThreadPrimitive, useLocalRuntime } from "@assistant-ui/react";
 import type { FC } from "react";
-
-import { OpenToolGroup, ToolRenderer } from "@/components/assistant-ui/run-sql-tool";
 import { Thread } from "@/components/assistant-ui/thread";
+import { OpenToolGroup, ToolRenderer } from "@/components/run-sql-tool";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 import { adapter } from "./runtime";
@@ -49,7 +48,9 @@ export default function App() {
             <span className="text-muted-foreground text-xs">text-to-SQL · RAG · mock mode</span>
           </header>
           <div className="min-h-0 flex-1">
-            <Thread components={{ Welcome, ToolFallback: ToolRenderer, ToolGroup: OpenToolGroup }} />
+            <Thread
+              components={{ Welcome, ToolFallback: ToolRenderer, ToolGroup: OpenToolGroup }}
+            />
           </div>
         </div>
       </TooltipProvider>

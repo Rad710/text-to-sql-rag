@@ -1,14 +1,12 @@
-import type { ComponentType, PropsWithChildren } from "react";
-
 import type { ToolCallMessagePartComponent } from "@assistant-ui/react";
-
+import type { ComponentType, PropsWithChildren } from "react";
+import type { ThreadGroupPart } from "@/components/assistant-ui/thread";
 import { ToolFallback } from "@/components/assistant-ui/tool-fallback";
 import {
   ToolGroupContent,
   ToolGroupRoot,
   ToolGroupTrigger,
 } from "@/components/assistant-ui/tool-group";
-import type { ThreadGroupPart } from "@/components/assistant-ui/thread";
 
 /** Structured result carried on the `run_sql` tool-call part (decision 0006). */
 type SqlResult = {
@@ -43,10 +41,12 @@ function ResultTable({ columns, rows, rowCount, truncated }: SqlResult) {
         </thead>
         <tbody>
           {rows.map((row, r) => (
+            // Static, read-only result grid — rows never reorder, so the row index is a stable key.
+            // biome-ignore lint/suspicious/noArrayIndexKey: positional result rows, no natural id
             <tr key={r}>
               {row.map((cell, c) => (
                 <td
-                  key={c}
+                  key={columns[c]}
                   className="border-muted-foreground/20 border-b border-s px-3 py-1.5 last:border-e"
                 >
                   {cell}
