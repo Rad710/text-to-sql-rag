@@ -41,3 +41,29 @@ def test_unknown_llm_mode_falls_back_to_mock(monkeypatch: pytest.MonkeyPatch) ->
     get_settings.cache_clear()
     assert get_settings().llm_mode == "mock"
     get_settings.cache_clear()
+
+
+def test_demo_mode_is_the_default_with_no_daily_cap() -> None:
+    s = Settings()
+    assert s.deploy_mode == "demo"
+    assert s.rate_limit_per_min == 60
+    assert s.rate_limit_per_day == 0  # 0 = no daily ceiling in demo
+
+
+def test_live_mode_sets_strict_rate_limit_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("DEPLOY_MODE", "live")
+    get_settings.cache_clear()
+    s = get_settings()
+    assert s.deploy_mode == "live"
+    assert (s.rate_limit_per_min, s.rate_limit_per_day) == (20, 100)
+    get_settings.cache_clear()
+
+
+def test_explicit_rate_limit_env_overrides_mode_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("DEPLOY_MODE", "live")
+    monkeypatch.setenv("RATE_LIMIT_PER_MIN", "5")
+    monkeypatch.setenv("RATE_LIMIT_PER_DAY", "0")
+    get_settings.cache_clear()
+    s = get_settings()
+    assert (s.rate_limit_per_min, s.rate_limit_per_day) == (5, 0)
+    get_settings.cache_clear()

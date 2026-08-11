@@ -14,3 +14,4 @@ numbered record that supersedes it, and link both ways. Template: [`_template.md
 | [0007](0007-layered-package-structure.md) | Group `app/` into layered sub-packages (safety / rag / llm) by concern | accepted | 2026-08-11 |
 | [0008](0008-app-datastore-postgres.md) | A separate Postgres app datastore (SQLAlchemy + Alembic) for users/conversations/feedback | accepted | 2026-08-11 |
 | [0009](0009-auth-jwt.md) | Authentication via JWT bearer tokens | accepted | 2026-08-11 |
+| [0010](0010-rate-limiting-deploy-modes.md) | Per-user /chat rate limiting (pure in-memory limiter) + demo/live deploy modes | accepted | 2026-08-11 |

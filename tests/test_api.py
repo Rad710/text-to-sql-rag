@@ -8,12 +8,13 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from app.api import app, get_service
+from app.api import app, get_chat_limiter, get_service
 from app.auth.deps import get_current_user
 from app.rag.corpus import build_corpus
 from app.rag.embeddings import OfflineEmbedder
 from app.rag.engine import RagStore
 from app.rag.schema import Column, ForeignKey, SchemaInfo, Table
+from app.ratelimit import RateLimiter
 from app.store.conversations import get_recorder
 from app.store.models import User
 
@@ -118,6 +119,17 @@ def test_chat_requires_auth(tmp_path: Path) -> None:
         assert resp.status_code == 401
     finally:
         app.dependency_overrides.clear()
+
+
+def test_chat_rate_limited_returns_429(client: TestClient) -> None:
+    """A per-user /chat limit trips after the budget, returning 429 + Retry-After (0010)."""
+    limiter = RateLimiter(per_minute=1)  # one shared instance across requests
+    app.dependency_overrides[get_chat_limiter] = lambda: limiter
+    q = {"question": "total freight revenue per route"}
+    assert client.post("/chat", json=q).status_code == 200  # first: within budget
+    resp = client.post("/chat", json=q)  # second: over the per-minute budget
+    assert resp.status_code == 429
+    assert int(resp.headers["Retry-After"]) > 0
 
 
 @pytest.mark.integration

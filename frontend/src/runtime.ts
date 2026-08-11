@@ -80,6 +80,25 @@ export const adapter: ChatModelAdapter = {
       signal: abortSignal,
     });
     if (!res.ok || !res.body) {
+      // Rate limited (decision 0010): the backend detail is the reason; we own the retry hint. Short
+      // waits (the per-minute limit) show seconds; the long daily-cap wait just says "más tarde".
+      if (res.status === 429) {
+        const retry = Number(res.headers.get("Retry-After"));
+        const hint =
+          retry > 0 && retry <= 90
+            ? ` Probá de nuevo en ${retry} s.`
+            : " Probá de nuevo más tarde.";
+        const detail = await res
+          .json()
+          .then((d: { detail?: string }) => d.detail)
+          .catch(() => undefined);
+        yield {
+          content: [
+            { type: "text", text: `⚠️ ${detail ?? "Alcanzaste el límite de consultas."}${hint}` },
+          ],
+        };
+        return;
+      }
       yield { content: [{ type: "text", text: `⚠️ ${res.status} ${res.statusText}` }] };
       return;
     }

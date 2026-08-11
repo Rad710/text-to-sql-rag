@@ -54,6 +54,30 @@ LLM_MODE=openai LLM_BASE_URL=http://localhost:8000/v1 LLM_MODEL=<served-model> \
 
 `LLM_API_KEY` is optional for Ollama (any placeholder works); set it if your server requires one.
 
+## Deploy modes
+
+The app ships in two flavors via `DEPLOY_MODE` ([decision 0010](docs/decisions/0010-rate-limiting-deploy-modes.md)),
+which sets sane **per-user** `/chat` rate-limit defaults; the mock LLM stays the default in both.
+
+| Mode | LLM | `/chat` per-user limit | Use |
+|------|-----|------------------------|-----|
+| `demo` (default) | mock | 60/min, no daily cap | safe to leave open — deterministic, no cost |
+| `live` | real (Ollama/vLLM) | 20/min **and** 100/day | real-LLM deploy; the daily cap bounds per-account cost |
+
+```bash
+# demo (default): nothing to set
+uv run uvicorn app.api:app
+
+# live: real LLM + stricter limits (set LLM_* per the section above)
+DEPLOY_MODE=live LLM_MODE=openai LLM_BASE_URL=... LLM_MODEL=... \
+  JWT_SECRET=<a-real-32B+-secret> uv run uvicorn app.api:app
+```
+
+The defaults are overridable: `RATE_LIMIT_PER_MIN` and `RATE_LIMIT_PER_DAY` (`0` = no daily cap). The
+limiter is per-user and in-memory (per process; resets on restart). Over the limit, `/chat` returns
+`429` with `Retry-After` and the SPA shows a friendly message. **Note:** auth endpoints are not
+rate-limited (see decision 0010). The hosted compose wiring for each mode lands in task 0014.
+
 ## SQL safety
 
 The assistant runs model-written SQL, so read-only is enforced in depth: a `SELECT`-only DB user,

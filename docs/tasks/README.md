@@ -41,7 +41,7 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 | [0019](0019-conversation-history/) | **Conversation history + thread-list UI** — persist conversations/messages and reload them (backed by 0017; the UI thread list) | done | 0016, 0017 |
 | [0020](0020-feedback/) | **Feedback 👍/👎 (persisted)** — thumbs on answers saved to the `feedback` table (feeds the few-shot-curation idea) | done | 0017, 0010 |
 | [0021](0021-result-charts/) | **Result charts** — render a bar/line (**Recharts**) when the query result shape fits | done | 0010 |
-| 0022 | **Rate limiting + deploy modes** — per-IP limit on `/chat` + config for the two deploy flavors (mock-only · real-LLM-with-limits) | proposed | 0009, 0015 |
+| [0022](0022-rate-limiting-deploy-modes/) | **Rate limiting + deploy modes** — per-**user** limit on `/chat` + `DEPLOY_MODE` config for the two flavors (demo · live) ([decision 0010](../decisions/0010-rate-limiting-deploy-modes.md)) | done | 0009, 0015 |
 | 0014 | **Deploy live** (the showcase must be clickable) — full docker-compose (API + built frontend + MySQL + Postgres), a hosted URL, README + `ai-workflow.md` finalization. **Sequenced last**, after 0015–0022 | proposed | 0010, 0018, 0022 |
 
 ## Backlog — open, unscheduled
@@ -102,6 +102,11 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 - [0020](0020-feedback/) — **feedback 👍/👎**: `POST /feedback` (owner-checked upsert, one per message);
   `/chat` emits the assistant message id + `GET /conversations/{id}` carries ids; thumbs in the action bar
   (idiomatic assistant-ui `FeedbackAdapter`) POST it. Integration + browser-verified (row in Postgres).
+- [0022](0022-rate-limiting-deploy-modes/) — **rate limiting + deploy modes**: a pure in-memory
+  `RateLimiter` (`app/ratelimit.py`, per-minute rate + optional per-day cap) enforced **per user** on
+  `/chat` (429 + Retry-After); a `DEPLOY_MODE=demo|live` knob sets the defaults (demo 60/min; live 20/min
+  + 100/day) with `RATE_LIMIT_PER_MIN`/`_PER_DAY` overrides; the SPA renders a friendly Spanish 429.
+  Decision 0010. 7 limiter + 3 config + 1 api tests, 2 frontend 429 tests; browser-verified.
 - [0021](0021-result-charts/) — **result charts**: a pure `analyzeResult` fit-heuristic (`frontend/src/lib/
   chart-data.ts`) + a `ResultView` with a **Tabla/Gráfico** toggle that `React.lazy`-loads a Recharts
   bar/line (`result-chart.tsx`, split to its own chunk). Bar for a categorical/composite axis (`origin ·
