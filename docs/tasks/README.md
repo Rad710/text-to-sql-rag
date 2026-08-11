@@ -31,7 +31,7 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 | [0008](0008-agentic-loop/) | Agentic orchestration — bounded tool-loop (`search_schema` + `run_sql`) + hardened execution + **execution-guided self-correction** (feed DB errors/empty results back for a repair pass), tested | done | 0004, 0006, 0007 |
 | [0009](0009-streaming-api/) | Agent **event-streaming** + **FastAPI SSE API** (backend we own) — refactor the loop to emit events (tool start → SQL → rows → answer → usage) + a `/chat` SSE endpoint + `/health` | done | 0008 |
 | [0010](0010-react-frontend/) | **Vite + React + TypeScript frontend** (assistant-ui) — styled `Thread` + **tool-call step rendering** + structured result table (decisions 0005/0006), regression tests + CI, browser-verified. Chainlit-parity scope now decided → decomposed into 0016/0018/0019/0020 | done | 0009 |
-| 0011 | **Stretch:** standalone read-only SQL MCP server (schema-search + `run_sql` tools) over the synthetic DB | proposed | 0004, 0006 |
+| [0011](0011-sql-mcp-server/) | **Stretch:** standalone read-only SQL MCP server (schema-search + `run_sql` tools) over the synthetic DB | done | 0004, 0006 |
 | [0012](0012-eval-harness/) | **Evaluation harness** — a golden `(question → gold SQL)` set + an execution-accuracy runner (compare result sets, not string match) wired into CI; plus `docs/failure-modes.md` | done | 0008 |
 | [0013](0013-devex-precommit-coverage/) | Dev-experience polish — `.pre-commit-config.yaml` (ruff + ruff-format + mypy) + coverage reporting (`pytest-cov`) in CI | done | 0001 |
 | [0015](0015-real-llm-config/) | **Real-LLM config** — point the OpenAI-compatible client at a local **Ollama/vLLM** endpoint (base URL / model / optional key) via env; mock stays the default; verify + document | done | 0007, 0009 |
@@ -102,6 +102,11 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 - [0020](0020-feedback/) — **feedback 👍/👎**: `POST /feedback` (owner-checked upsert, one per message);
   `/chat` emits the assistant message id + `GET /conversations/{id}` carries ids; thumbs in the action bar
   (idiomatic assistant-ui `FeedbackAdapter`) POST it. Integration + browser-verified (row in Postgres).
+- [0011](0011-sql-mcp-server/) — **SQL MCP server** (stretch): `app/mcp_server.py` exposes `search_schema`
+  + `run_sql` as Model-Context-Protocol tools over the synthetic DB, reusing the safety + RAG layers
+  verbatim (decision 0003 holds through the adapter). Both transports — stdio default + `--http`
+  (streamable HTTP); `mcp` 2.0 as an opt-in `[mcp]` extra. Verified end-to-end with a real MCP client:
+  lists both tools, returns rows, and rejects a `DELETE` as `ERROR:` text. 4 unit tests.
 - [0014](0014-deploy-live/) — **deploy live**: production `docker-compose.prod.yml` — **nginx** serves the
   built SPA and reverse-proxies the API (one origin, SSE-safe), in front of FastAPI (mock mode + Alembic
   migrations on boot via `docker-entrypoint.sh`), MySQL, and Postgres. Multi-stage `frontend/Dockerfile`

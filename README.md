@@ -78,6 +78,36 @@ limiter is per-user and in-memory (per process; resets on restart). Over the lim
 `429` with `Retry-After` and the SPA shows a friendly message. **Note:** auth endpoints are not
 rate-limited (see decision 0010).
 
+## SQL MCP server (stretch)
+
+The schema-search + read-only `run_sql` capabilities are also exposed as a standalone **Model Context
+Protocol** server, so any MCP client (Claude Desktop/Code, the MCP Inspector) can query the synthetic DB
+directly — with the exact same SQL-safety guarantees (it reuses the validator + read-only execution, so
+writes are rejected). Install the extra and run it:
+
+```bash
+uv sync --extra mcp
+uv run python -m app.mcp_server          # stdio (for a local client)
+uv run python -m app.mcp_server --http   # streamable HTTP on 127.0.0.1:8848/mcp
+```
+
+Register it with an MCP client (stdio) — e.g. a `mcpServers` entry:
+
+```json
+{
+  "mcpServers": {
+    "dyr-sql": {
+      "command": "uv",
+      "args": ["run", "python", "-m", "app.mcp_server"],
+      "cwd": "/absolute/path/to/text-to-sql-rag",
+      "env": { "DB_HOST": "127.0.0.1", "DB_USER": "llm_readonly", "DB_NAME": "dyrtransportes" }
+    }
+  }
+}
+```
+
+See [`docs/tasks/0011-sql-mcp-server/`](docs/tasks/0011-sql-mcp-server/).
+
 ## Deploy
 
 <!-- Once hosted, put the clickable URL here:  **Live demo:** https://your-domain -->
