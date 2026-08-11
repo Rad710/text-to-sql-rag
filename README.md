@@ -76,7 +76,24 @@ DEPLOY_MODE=live LLM_MODE=openai LLM_BASE_URL=... LLM_MODEL=... \
 The defaults are overridable: `RATE_LIMIT_PER_MIN` and `RATE_LIMIT_PER_DAY` (`0` = no daily cap). The
 limiter is per-user and in-memory (per process; resets on restart). Over the limit, `/chat` returns
 `429` with `Retry-After` and the SPA shows a friendly message. **Note:** auth endpoints are not
-rate-limited (see decision 0010). The hosted compose wiring for each mode lands in task 0014.
+rate-limited (see decision 0010).
+
+## Deploy
+
+<!-- Once hosted, put the clickable URL here:  **Live demo:** https://your-domain -->
+_Live demo: not yet hosted — deploy it yourself in a few minutes with the runbook below._
+
+A production `docker-compose` runs the whole stack behind **nginx** (serves the built SPA and proxies
+the API — one origin, no CORS): FastAPI (mock mode + Alembic migrations on boot), the synthetic MySQL
+query DB, and the Postgres app store.
+
+```bash
+# create a .env with secrets (template in DEPLOY.md), then:
+docker compose -f docker-compose.prod.yml up -d --build
+# → the app is served on http://localhost (nginx); API is internal-only
+```
+
+Full runbook — the `.env` template, TLS, and the demo↔live switch — is in [`DEPLOY.md`](DEPLOY.md).
 
 ## SQL safety
 

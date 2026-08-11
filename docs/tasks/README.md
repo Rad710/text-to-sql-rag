@@ -42,7 +42,7 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 | [0020](0020-feedback/) | **Feedback 👍/👎 (persisted)** — thumbs on answers saved to the `feedback` table (feeds the few-shot-curation idea) | done | 0017, 0010 |
 | [0021](0021-result-charts/) | **Result charts** — render a bar/line (**Recharts**) when the query result shape fits | done | 0010 |
 | [0022](0022-rate-limiting-deploy-modes/) | **Rate limiting + deploy modes** — per-**user** limit on `/chat` + `DEPLOY_MODE` config for the two flavors (demo · live) ([decision 0010](../decisions/0010-rate-limiting-deploy-modes.md)) | done | 0009, 0015 |
-| 0014 | **Deploy live** (the showcase must be clickable) — full docker-compose (API + built frontend + MySQL + Postgres), a hosted URL, README + `ai-workflow.md` finalization. **Sequenced last**, after 0015–0022 | proposed | 0010, 0018, 0022 |
+| [0014](0014-deploy-live/) | **Deploy live** (the showcase must be clickable) — production docker-compose (nginx SPA+proxy + API + MySQL + Postgres), `DEPLOY.md` runbook, README Deploy section. Artifacts built + locally verified; owner does the VM/DNS/TLS + hosted URL | done | 0010, 0018, 0022 |
 
 ## Backlog — open, unscheduled
 
@@ -102,6 +102,12 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 - [0020](0020-feedback/) — **feedback 👍/👎**: `POST /feedback` (owner-checked upsert, one per message);
   `/chat` emits the assistant message id + `GET /conversations/{id}` carries ids; thumbs in the action bar
   (idiomatic assistant-ui `FeedbackAdapter`) POST it. Integration + browser-verified (row in Postgres).
+- [0014](0014-deploy-live/) — **deploy live**: production `docker-compose.prod.yml` — **nginx** serves the
+  built SPA and reverse-proxies the API (one origin, SSE-safe), in front of FastAPI (mock mode + Alembic
+  migrations on boot via `docker-entrypoint.sh`), MySQL, and Postgres. Multi-stage `frontend/Dockerfile`
+  (+`nginx.conf`, `.dockerignore`), `DEPLOY.md` runbook, README Deploy section. Verified the full stack
+  locally end-to-end through nginx (auth → question → chart → persisted feedback), 0 console errors; the
+  owner does the VM/DNS/TLS + hosted URL.
 - [0013](0013-devex-precommit-coverage/) — **dev-experience polish**: `.pre-commit-config.yaml`
   (ruff-check --fix + ruff-format pinned to our ruff, a local `uv run mypy` hook, basic hygiene hooks) so
   the CI gates run locally pre-commit; `pytest-cov` wired into the CI quality job with a `fail_under = 80`

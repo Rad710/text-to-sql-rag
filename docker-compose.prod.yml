@@ -1,0 +1,83 @@
+# Production stack (task 0014): nginx serves the built SPA and reverse-proxies the API, in front of the
+# FastAPI app (mock mode + migrations on boot), the synthetic MySQL query DB, and the Postgres app store.
+# Single origin via nginx → no CORS. Only nginx is published; the app port stays on the internal network.
+#
+#   create a .env with the required secrets (template + generator in DEPLOY.md)
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# See DEPLOY.md for the full runbook (the .env template, TLS, the demo↔live switch, backups).
+services:
+  web:
+    build: ./frontend
+    ports:
+      - "${WEB_PORT:-80}:80"    # published port (default 80); put TLS (Caddy/Cloudflare) in front
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: unless-stopped
+
+  app:
+    build: .
+    # No published port — reachable only as `app:8000` on the compose network, via nginx.
+    expose:
+      - "8000"
+    environment:
+      DEPLOY_MODE: ${DEPLOY_MODE:-demo}   # demo = mock LLM, generous limits (see decision 0010)
+      LLM_MODE: ${LLM_MODE:-mock}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env (32+ bytes) for a real deploy}
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_USER: ${DB_USER:-llm_readonly}
+      DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+      DB_NAME: dyrtransportes
+      APP_DATABASE_URL: postgresql+asyncpg://app:${APP_DB_PASSWORD:-app}@postgres:5432/dyr_app
+    depends_on:
+      mysql:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env}
+      MYSQL_DATABASE: dyrtransportes
+      DB_USER: ${DB_USER:-llm_readonly}      # read by db/init/03_grant_readonly.sh
+      DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+    volumes:
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+      - mysqldata:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: ${APP_DB_PASSWORD:-app}
+      POSTGRES_DB: dyr_app
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d dyr_app"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  mysqldata:

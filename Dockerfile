@@ -16,8 +16,14 @@ COPY pyproject.toml ./
 RUN uv sync --no-dev --no-install-project
 
 COPY app ./app
+# Migrations run on boot (see docker-entrypoint.sh), so the app store schema is applied automatically.
+COPY alembic ./alembic
+COPY alembic.ini ./
+COPY docker-entrypoint.sh ./
+RUN chmod +x docker-entrypoint.sh
 
 EXPOSE 8000
 # Mock LLM mode by default — the image runs with no API key.
 ENV LLM_MODE=mock
-CMD ["uv", "run", "--no-dev", "uvicorn", "app.api:app", "--host", "0.0.0.0", "--port", "8000"]
+# Apply migrations, then serve. Override the entrypoint if you need to run migrations separately.
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
