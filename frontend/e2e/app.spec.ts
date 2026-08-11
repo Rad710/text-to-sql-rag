@@ -43,6 +43,15 @@ test("full journey: register → ask → chart → feedback → multi-turn → r
   await expect(page.getByText("y por chofer?")).toBeVisible();
   await expect(page.getByText(/Consulté la base de datos/)).toHaveCount(2, { timeout: 20_000 });
 
+  // Regression guard: a multi-turn conversation must NOT run the layout away. The thread scrolls
+  // internally, so the document height stays ~one viewport — not the 100000s of px the unclamped
+  // autoscroll spacer produced before the height cascade was pinned. `toBeVisible` above never caught
+  // this because it ignores runaway height; assert an explicit bound.
+  await page.waitForTimeout(1000); // let any layout loop manifest
+  const docHeight = await page.evaluate(() => document.documentElement.scrollHeight);
+  const viewportH = page.viewportSize()?.height ?? 720;
+  expect(docHeight).toBeLessThan(viewportH * 3);
+
   // --- logout → re-login → the conversation is restored from the store ---
   await page.getByRole("button", { name: /salir/i }).click();
   await expect(page.getByRole("button", { name: /entrar/i })).toBeVisible();

@@ -144,6 +144,14 @@
   html {
     @apply font-sans;
     }
+  /* Pin the height cascade to the viewport so the app's `h-full` chain resolves. Without this the
+     assistant-ui thread viewport is unclamped and its scroll-to-bottom spacer grows unbounded once a
+     conversation overflows one screen (the runaway "blank space / shrinking scrollbar" bug). */
+  html,
+  body,
+  #root {
+    height: 100%;
+    }
 }
 
 @custom-variant data-open (&:where([data-state="open"], [data-open]:not([data-open="false"])));
