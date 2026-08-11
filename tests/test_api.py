@@ -14,7 +14,18 @@ from app.rag.corpus import build_corpus
 from app.rag.embeddings import OfflineEmbedder
 from app.rag.engine import RagStore
 from app.rag.schema import Column, ForeignKey, SchemaInfo, Table
+from app.store.conversations import get_recorder
 from app.store.models import User
+
+
+class _NoopRecorder:
+    """A ConversationRecorder that persists nothing — keeps the /chat unit tests DB-free (0019)."""
+
+    async def start(self, *, user_id: str, conversation_id: str | None, question: str) -> str:
+        return "conv-test"
+
+    async def finish(self, *, conversation_id: str, answer: str) -> None:
+        return None
 
 
 def _t(name: str, *cols: str, pk: str, fks: tuple[ForeignKey, ...] = ()) -> Table:
@@ -48,6 +59,7 @@ def client(tmp_path: Path) -> Iterator[TestClient]:
     app.dependency_overrides[get_current_user] = lambda: User(
         id="u1", email="tester@dyr.test", name="Tester", password_hash="x"
     )
+    app.dependency_overrides[get_recorder] = lambda: _NoopRecorder()
     yield TestClient(app)
     app.dependency_overrides.clear()
 

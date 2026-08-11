@@ -1,0 +1,86 @@
+"""Conversation persistence + history endpoints (0019) — opt-in integration over live Postgres."""
+
+from __future__ import annotations
+
+import asyncio
+import os
+import tempfile
+import uuid
+
+import httpx
+import pytest
+
+from app.rag.corpus import build_corpus
+from app.rag.embeddings import OfflineEmbedder
+from app.rag.engine import RagStore
+from app.rag.schema import Column, SchemaInfo, Table
+from app.store.models import Base
+
+
+def _schema() -> SchemaInfo:
+    cols = (
+        Column("route_code", "int", nullable=False, is_primary_key=True),
+        Column("price", "int", nullable=False, is_primary_key=False),
+    )
+    return SchemaInfo(tables=(Table(name="route", columns=cols, foreign_keys=()),))
+
+
+@pytest.mark.integration
+def test_chat_persists_and_history_is_isolated_per_user() -> None:
+    from sqlalchemy.exc import InterfaceError, OperationalError
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    import app.store.engine as store_engine
+    from app.api import app, get_service
+
+    url = os.environ.get("APP_DATABASE_URL", "postgresql+asyncpg://app:app@localhost:5432/dyr_app")
+    schema = _schema()
+    store = RagStore(path=tempfile.mkdtemp(), embedder=OfflineEmbedder())
+    store.sync_corpus(build_corpus(schema))
+    app.dependency_overrides[get_service] = lambda: (store, schema)
+
+    async def flow() -> None:
+        engine = create_async_engine(url)
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        await engine.dispose()
+
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as ac:
+
+            async def token_for(email: str) -> str:
+                r = await ac.post(
+                    "/auth/register", json={"email": email, "name": "U", "password": "pw123456"}
+                )
+                assert r.status_code == 201
+                return str(r.json()["access_token"])
+
+            auth_a = {"Authorization": f"Bearer {await token_for(f'a-{uuid.uuid4()}@dyr.test')}"}
+            auth_b = {"Authorization": f"Bearer {await token_for(f'b-{uuid.uuid4()}@dyr.test')}"}
+
+            chat = await ac.post(
+                "/chat", json={"question": "facturación total por ruta"}, headers=auth_a
+            )
+            assert chat.status_code == 200 and "event: conversation" in chat.text
+
+            listed = await ac.get("/conversations", headers=auth_a)
+            assert listed.status_code == 200 and len(listed.json()) == 1
+            conv_id = listed.json()[0]["id"]
+
+            detail = await ac.get(f"/conversations/{conv_id}", headers=auth_a)
+            assert detail.status_code == 200
+            roles = [m["role"] for m in detail.json()["messages"]]
+            assert "user" in roles and "assistant" in roles and len(roles) >= 2
+
+            # user B cannot see user A's conversation, and has none of their own
+            assert (await ac.get(f"/conversations/{conv_id}", headers=auth_b)).status_code == 404
+            assert (await ac.get("/conversations", headers=auth_b)).json() == []
+
+    try:
+        asyncio.run(flow())
+    except (OSError, InterfaceError, OperationalError) as exc:  # pragma: no cover - env-dependent
+        pytest.skip(f"no Postgres reachable: {exc}")
+    finally:
+        app.dependency_overrides.clear()
+        store_engine._engine = None
+        store_engine._sessionmaker = None

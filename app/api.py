@@ -9,7 +9,7 @@ dependency, so the endpoint tests without a database.
 from __future__ import annotations
 
 import json
-from collections.abc import Iterator
+from collections.abc import AsyncIterator
 from typing import Annotated, Literal
 
 import pymysql
@@ -27,7 +27,9 @@ from app.rag.corpus import build_corpus
 from app.rag.engine import RagStore
 from app.rag.introspect import introspect_from_settings
 from app.rag.schema import SchemaInfo
+from app.store.conversations import ConversationRecorder, get_recorder
 from app.store.models import User
+from app.store.router import router as conversations_router
 
 app = FastAPI(title="text-to-sql-rag", version=__version__)
 app.add_middleware(
@@ -37,6 +39,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(auth_router)
+app.include_router(conversations_router)
 
 _service: tuple[RagStore, SchemaInfo] | None = None
 
@@ -69,6 +72,7 @@ class Turn(BaseModel):
 class ChatRequest(BaseModel):
     question: str
     history: list[Turn] = []
+    conversation_id: str | None = None
 
 
 @app.get("/health")
@@ -82,18 +86,30 @@ def _sse(event: AgentEvent) -> str:
 
 
 @app.post("/chat")
-def chat(
+async def chat(
     req: ChatRequest,
     user: Annotated[User, Depends(get_current_user)],
+    recorder: Annotated[ConversationRecorder, Depends(get_recorder)],
     service: tuple[RagStore, SchemaInfo] = Depends(get_service),
 ) -> StreamingResponse:
-    """Answer a question, streaming the agent's events as SSE. Requires a valid JWT (0009)."""
+    """Answer a question, streaming the agent's events as SSE. Requires a valid JWT (0009).
+
+    Persists the turn under the user's conversation (0019): the user message before streaming, the
+    assistant answer when the stream ends. The agent's context still comes from ``history`` (0016).
+    """
     store, schema = service
-
     history = [turn.model_dump() for turn in req.history]
+    conversation_id = await recorder.start(
+        user_id=user.id, conversation_id=req.conversation_id, question=req.question
+    )
 
-    def event_stream() -> Iterator[str]:
+    async def event_stream() -> AsyncIterator[str]:
+        yield _sse(AgentEvent("conversation", {"id": conversation_id}))
+        answer = ""
         for event in stream(req.question, store=store, schema=schema, history=history):
+            if event.type == "answer":
+                answer = str(event.data.get("text") or "")
             yield _sse(event)
+        await recorder.finish(conversation_id=conversation_id, answer=answer)
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
