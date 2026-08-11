@@ -1,6 +1,16 @@
 import { expect, test } from "vitest";
 
-import { analyzeResult, parseNumeric } from "./chart-data";
+import { analyzeResult, formatCellValue, parseNumeric } from "./chart-data";
+
+test("formatCellValue: groups measures, leaves years/text/small ints alone", () => {
+  expect(formatCellValue("8000000.00")).toBe("8.000.000"); // money → grouped
+  expect(formatCellValue("165500")).toBe("165.500");
+  expect(formatCellValue("12.5")).toBe("12,5"); // es decimal comma
+  expect(formatCellValue("2024")).toBe("2024"); // 4-digit year: not grouped
+  expect(formatCellValue("4")).toBe("4");
+  expect(formatCellValue("Asunción")).toBe("Asunción"); // non-numeric unchanged
+  expect(formatCellValue("")).toBe("");
+});
 
 test("parseNumeric: plain, signed, decimal, and thousands-separated numbers", () => {
   expect(parseNumeric("8000000")).toBe(8000000);

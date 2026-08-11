@@ -5,7 +5,7 @@ import type {
   ToolCallMessagePart,
 } from "@assistant-ui/react";
 
-import { getToken } from "./auth";
+import { getToken, notifyUnauthorized } from "./auth";
 import { getConversationId, notifyConversation } from "./conversation";
 import { setLastAssistantMessageId } from "./feedback";
 
@@ -80,6 +80,13 @@ export const adapter: ChatModelAdapter = {
       signal: abortSignal,
     });
     if (!res.ok || !res.body) {
+      // Session expired / not authenticated: clear the token and bounce back to login (don't leave a
+      // raw "401" in the thread).
+      if (res.status === 401) {
+        notifyUnauthorized();
+        yield { content: [{ type: "text", text: "⚠️ Tu sesión expiró. Iniciá sesión de nuevo." }] };
+        return;
+      }
       // Rate limited (decision 0010): the backend detail is the reason; we own the retry hint. Short
       // waits (the per-minute limit) show seconds; the long daily-cap wait just says "más tarde".
       if (res.status === 429) {

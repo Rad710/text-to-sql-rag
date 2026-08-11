@@ -1,7 +1,9 @@
 import { lazy, Suspense, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { analyzeResult } from "@/lib/chart-data";
+import { analyzeResult, formatCellValue, parseNumeric } from "@/lib/chart-data";
+
+import { cn } from "@/lib/utils";
 
 // Recharts is ~900 kB; the chart is opt-in behind the toggle, so defer the whole module until the user
 // first switches to Gráfico. Keeps it out of the initial bundle.
@@ -42,14 +44,21 @@ function ResultTable({ columns, rows }: SqlResult) {
           // Static, read-only result grid — rows never reorder, so the row index is a stable key.
           // biome-ignore lint/suspicious/noArrayIndexKey: positional result rows, no natural id
           <tr key={r}>
-            {row.map((cell, c) => (
-              <td
-                key={columns[c]}
-                className="border-muted-foreground/20 border-b border-s px-3 py-1.5 last:border-e"
-              >
-                {cell}
-              </td>
-            ))}
+            {row.map((cell, c) => {
+              const numeric = parseNumeric(cell) !== null;
+              return (
+                <td
+                  key={columns[c]}
+                  className={cn(
+                    "border-muted-foreground/20 border-b border-s px-3 py-1.5 last:border-e",
+                    // Right-align + tabular figures so numeric columns line up.
+                    numeric && "text-end tabular-nums",
+                  )}
+                >
+                  {formatCellValue(cell)}
+                </td>
+              );
+            })}
           </tr>
         ))}
       </tbody>

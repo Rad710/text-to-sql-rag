@@ -75,7 +75,7 @@ test("authenticated: renders tool steps + result table + answer, and sends the B
   expect(screen.getByRole("columnheader", { name: "ruta" })).toBeInTheDocument();
   expect(screen.getByRole("columnheader", { name: "ingresos" })).toBeInTheDocument();
   expect(screen.getByRole("cell", { name: "Asunción" })).toBeInTheDocument();
-  expect(screen.getByRole("cell", { name: "8000000" })).toBeInTheDocument();
+  expect(screen.getByRole("cell", { name: "8.000.000" })).toBeInTheDocument(); // grouped (task 0028)
   expect(screen.getByText(/Consulté la base de datos/)).toBeInTheDocument();
   expect(screen.getByText(/3 steps · 3400 tokens · \$0\.0000/)).toBeInTheDocument();
 

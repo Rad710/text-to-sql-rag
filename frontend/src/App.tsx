@@ -11,7 +11,7 @@ import { Thread } from "@/components/assistant-ui/thread";
 import { OpenToolGroup, ToolRenderer } from "@/components/run-sql-tool";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-import { type AuthUser, clearToken, fetchMe } from "./auth";
+import { type AuthUser, clearToken, fetchMe, onUnauthorized } from "./auth";
 import { ConversationList } from "./ConversationList";
 import { onConversationStarted, setConversationId } from "./conversation";
 import { getLastAssistantMessageId, setLastAssistantMessageId, submitFeedback } from "./feedback";
@@ -132,6 +132,12 @@ export default function App() {
     setInitialMessages([]);
     setUser(null);
   }, []);
+
+  // A 401 during any request (e.g. an expired token mid-session) bounces back to the login screen.
+  useEffect(() => {
+    onUnauthorized(logout);
+    return () => onUnauthorized(null);
+  }, [logout]);
 
   if (loading) {
     return (

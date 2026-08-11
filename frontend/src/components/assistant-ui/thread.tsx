@@ -26,7 +26,6 @@ import {
   MicIcon,
   MoreHorizontalIcon,
   PencilIcon,
-  RefreshCwIcon,
   SquareIcon,
   ThumbsDownIcon,
   ThumbsUpIcon,
@@ -443,9 +442,8 @@ const AssistantActionBar: FC = () => {
           <CopyIcon className="animate-in zoom-in-75 fade-in duration-150" />
         </AuiIf>
       </ActionBarPrimitive.Copy>
-      <ActionBarPrimitive.Reload render={<TooltipIconButton tooltip="Refresh" />}>
-        <RefreshCwIcon />
-      </ActionBarPrimitive.Reload>
+      {/* No Reload/regenerate: /chat persists every turn, so regenerating would append a duplicate
+          turn to the stored conversation (task 0028). Omitted until the store supports replace-in-place. */}
       <ActionBarPrimitive.FeedbackPositive
         render={
           <TooltipIconButton

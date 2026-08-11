@@ -31,6 +31,19 @@ export function parseNumeric(value: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+// Group thousands for readable measures. The "es" locale only groups 5+ digit numbers (its
+// minimumGroupingDigits is 2), so 4-digit years like "2024" stay ungrouped — exactly what we want.
+const CELL_NUMBER_FORMAT = new Intl.NumberFormat("es", { maximumFractionDigits: 2 });
+
+/**
+ * Format a result cell for display: numbers get thousands separators (e.g. ``8000000.00`` →
+ * ``8.000.000``); anything non-numeric is returned unchanged.
+ */
+export function formatCellValue(raw: string): string {
+  const n = parseNumeric(raw);
+  return n === null ? raw : CELL_NUMBER_FORMAT.format(n);
+}
+
 /** Whether every value in a column parses as a number. */
 function isNumericColumn(rows: string[][], colIndex: number): boolean {
   return rows.every((row) => parseNumeric(row[colIndex] ?? "") !== null);

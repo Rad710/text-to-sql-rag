@@ -18,6 +18,19 @@ export function clearToken(): void {
   localStorage.removeItem(TOKEN_KEY);
 }
 
+// Seam so a 401 during a request (e.g. the token expired mid-session) can bounce the user back to the
+// login screen. The runtime adapter calls notifyUnauthorized(); App registers the handler.
+let unauthorizedHandler: (() => void) | null = null;
+
+export function onUnauthorized(handler: (() => void) | null): void {
+  unauthorizedHandler = handler;
+}
+
+export function notifyUnauthorized(): void {
+  clearToken();
+  unauthorizedHandler?.();
+}
+
 /**
  * True only when the JWT is definitely past its `exp`. Used to skip the `/auth/me` probe for an
  * expired token — otherwise the browser logs a (harmless but noisy) 401 on every load for a returning
