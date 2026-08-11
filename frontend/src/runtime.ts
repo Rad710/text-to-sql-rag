@@ -7,6 +7,7 @@ import type {
 
 import { getToken } from "./auth";
 import { getConversationId, notifyConversation } from "./conversation";
+import { setLastAssistantMessageId } from "./feedback";
 
 /** Join a message's text parts (ignoring tool-call/other parts) into a plain string. */
 function messageText(message: ThreadMessage): string {
@@ -123,6 +124,9 @@ export const adapter: ChatModelAdapter = {
         usage = `\`${d.iterations} steps · ${d.total_tokens} tokens · $${cost}\``;
       } else if (evt.type === "conversation") {
         notifyConversation(String(evt.data.id)); // task 0019 — remember which conversation this is
+        continue;
+      } else if (evt.type === "message") {
+        setLastAssistantMessageId(String(evt.data.id)); // task 0020 — feedback targets this message
         continue;
       } else {
         continue; // e.g. "done"

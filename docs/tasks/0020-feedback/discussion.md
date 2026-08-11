@@ -11,3 +11,12 @@ Append-only. Newest at the bottom, each entry dated.
   (`POST /feedback` with `rating: Literal[-1, 1]` → 422 on anything else). `GET /conversations/{id}` messages
   now include `id`. Integration (in `test_conversations.py`): rate → 204, re-rate → 204 (upsert), other
   user → 404, bad rating → 422. 112 unit + integration green; mypy strict clean.
+- 2026-08-11: **Stage B — frontend (done).** `feedback.ts` (latest-assistant-message-id state + the
+  `submitFeedback` client), `runtime.ts` handles the `message` event → `setLastAssistantMessageId`,
+  `history.ts` messages carry ids. Added `ActionBarPrimitive.FeedbackPositive/Negative` (👍/👎) to the
+  generated `thread.tsx` action bar and wired a `FeedbackAdapter` in `useLocalRuntime` that POSTs
+  `/feedback` for the latest message id. Because the action bar autohides on all but the last message, the
+  latest-id target is always correct; on reload, the id is set from the loaded conversation's last
+  assistant message. Browser QA caught another missing Vite proxy entry (`/feedback` → 404); added it.
+  Verified via Playwright: 👍 → `POST /feedback` → 204 → row in the Postgres `feedback` table. 0 console
+  errors. Frontend lint/build/test green.

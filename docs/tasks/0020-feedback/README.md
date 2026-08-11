@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 updated: 2026-08-11
 depends_on: [0017, 0010]
 ---
@@ -24,11 +24,11 @@ rating: -1|1}`). `GET /conversations/{id}` messages gain `id`. Integration tests
 message id (from the `message` event, or a reloaded message's id); tests + browser verification.
 
 ## Done when
-- [ ] `POST /feedback` upserts one rating per message, owner-checked (404 across users, 422 on bad rating);
+- [x] `POST /feedback` upserts one rating per message, owner-checked (404 across users, 422 on bad rating);
       `/chat` emits the assistant `message` id; `GET /conversations/{id}` includes message ids.
-- [ ] Integration tests green; `ruff`/`mypy`/`pytest` green.
-- [ ] 👍/👎 UI wired to `/feedback`; tests + browser-verified.
-- [ ] Committed.
+- [x] Integration tests green; `ruff`/`mypy`/`pytest` green.
+- [x] 👍/👎 UI wired to `/feedback`; tests + browser-verified.
+- [x] Committed.
 
 ---
 Log → [`discussion.md`](discussion.md)

@@ -3,7 +3,7 @@
 import { getToken } from "./auth";
 
 export type ConversationSummary = { id: string; title: string };
-export type HistoryMessage = { role: "user" | "assistant"; content: string };
+export type HistoryMessage = { id: string; role: "user" | "assistant"; content: string };
 
 function authGet(path: string): Promise<Response> {
   return fetch(path, { headers: { Authorization: `Bearer ${getToken() ?? ""}` } });

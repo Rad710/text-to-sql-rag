@@ -28,6 +28,8 @@ import {
   PencilIcon,
   RefreshCwIcon,
   SquareIcon,
+  ThumbsDownIcon,
+  ThumbsUpIcon,
 } from "lucide-react";
 import {
   type ComponentType,
@@ -444,6 +446,12 @@ const AssistantActionBar: FC = () => {
       <ActionBarPrimitive.Reload render={<TooltipIconButton tooltip="Refresh" />}>
         <RefreshCwIcon />
       </ActionBarPrimitive.Reload>
+      <ActionBarPrimitive.FeedbackPositive render={<TooltipIconButton tooltip="Buena respuesta" />}>
+        <ThumbsUpIcon />
+      </ActionBarPrimitive.FeedbackPositive>
+      <ActionBarPrimitive.FeedbackNegative render={<TooltipIconButton tooltip="Mala respuesta" />}>
+        <ThumbsDownIcon />
+      </ActionBarPrimitive.FeedbackNegative>
       <ActionBarMorePrimitive.Root>
         <ActionBarMorePrimitive.Trigger
           render={<TooltipIconButton tooltip="More" className="data-[state=open]:bg-accent" />}

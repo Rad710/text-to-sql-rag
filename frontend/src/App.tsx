@@ -13,6 +13,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { type AuthUser, clearToken, fetchMe } from "./auth";
 import { ConversationList } from "./ConversationList";
 import { onConversationStarted, setConversationId } from "./conversation";
+import { getLastAssistantMessageId, setLastAssistantMessageId, submitFeedback } from "./feedback";
 import { type ConversationSummary, getConversationMessages, listConversations } from "./history";
 import { LoginScreen } from "./LoginScreen";
 import { adapter } from "./runtime";
@@ -51,7 +52,18 @@ const Welcome: FC = () => (
 // A fresh local runtime seeded with a conversation's prior messages. Remounted (via `key`) when the
 // active conversation changes, so switching threads re-seeds the runtime (task 0019).
 const ChatPane: FC<{ initialMessages: ThreadMessageLike[] }> = ({ initialMessages }) => {
-  const runtime = useLocalRuntime(adapter, { initialMessages });
+  const runtime = useLocalRuntime(adapter, {
+    initialMessages,
+    adapters: {
+      // Thumbs on the latest answer (the action bar autohides on older ones) → POST /feedback (0020).
+      feedback: {
+        submit: ({ type }) => {
+          const id = getLastAssistantMessageId();
+          if (id) void submitFeedback(id, type === "positive" ? 1 : -1);
+        },
+      },
+    },
+  });
   return (
     <AssistantRuntimeProvider runtime={runtime}>
       <Thread components={{ Welcome, ToolFallback: ToolRenderer, ToolGroup: OpenToolGroup }} />
@@ -91,6 +103,7 @@ export default function App() {
 
   const startNew = useCallback(() => {
     setConversationId(null);
+    setLastAssistantMessageId(null);
     setInitialMessages([]);
     setActiveId(null);
     setPaneKey((k) => k + 1);
@@ -99,6 +112,9 @@ export default function App() {
   const openConversation = useCallback(async (id: string) => {
     const messages = await getConversationMessages(id);
     setConversationId(id);
+    // The latest answer (the only one showing an action bar) is what feedback targets on reload.
+    const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
+    setLastAssistantMessageId(lastAssistant?.id ?? null);
     setInitialMessages(messages.map((m) => ({ role: m.role, content: m.content })));
     setActiveId(id);
     setPaneKey((k) => k + 1);

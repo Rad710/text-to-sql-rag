@@ -29,6 +29,7 @@ const SSE_FRAMES = [
   'event: tool_result\ndata: {"name": "run_sql", "columns": ["revenue"], "rows": [["8000000"]], "row_count": 1, "truncated": false}\n\n',
   'event: answer\ndata: {"text": "Consulté la base de datos para responder."}\n\n',
   'event: usage\ndata: {"iterations": 3, "total_tokens": 3400, "cost_usd": 0}\n\n',
+  'event: message\ndata: {"id": "msg-9"}\n\n',
 ];
 
 afterEach(() => {
@@ -59,6 +60,9 @@ test("authenticated: renders tool steps + result table + answer, and sends the B
     if (url === "/conversations") {
       return Promise.resolve(jsonResponse([]));
     }
+    if (url === "/feedback") {
+      return Promise.resolve({ ok: true, status: 204 } as Response);
+    }
     return Promise.resolve(sseResponse(SSE_FRAMES));
   });
   vi.stubGlobal("fetch", fetchMock);
@@ -80,4 +84,13 @@ test("authenticated: renders tool steps + result table + answer, and sends the B
   const body = JSON.parse(init.body as string);
   expect(body.question).toMatch(/facturación total por ruta/);
   expect(body.history).toEqual([]);
+
+  // 👍 on the answer posts feedback for the streamed message id (task 0020).
+  await userEvent.click(await screen.findByRole("button", { name: /buena respuesta/i }));
+  const fb = fetchMock.mock.calls.find((c) => String(c[0]) === "/feedback");
+  if (!fb) throw new Error("expected a /feedback POST");
+  expect(JSON.parse((fb[1] as RequestInit).body as string)).toEqual({
+    message_id: "msg-9",
+    rating: 1,
+  });
 });

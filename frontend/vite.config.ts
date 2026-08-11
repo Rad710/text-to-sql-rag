@@ -16,6 +16,7 @@ export default defineConfig({
       "/chat": "http://localhost:8000",
       "/auth": "http://localhost:8000",
       "/conversations": "http://localhost:8000",
+      "/feedback": "http://localhost:8000",
       "/health": "http://localhost:8000",
     },
   },
