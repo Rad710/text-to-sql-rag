@@ -11,3 +11,6 @@ numbered record that supersedes it, and link both ways. Template: [`_template.md
 | [0004](0004-synthetic-db-via-init-sql.md) | Materialize a synthetic demo DB via MySQL init SQL (not Alembic), business tables only | accepted | 2026-08-10 |
 | [0005](0005-custom-fastapi-sse-react-frontend.md) | Custom FastAPI SSE API + Vite/React/TS frontend (assistant-ui), not a chat framework (amends 0001's UI) | accepted | 2026-08-10 |
 | [0006](0006-structured-results-over-sse.md) | Stream structured query results over SSE; the frontend owns table presentation | accepted | 2026-08-11 |
+| [0007](0007-layered-package-structure.md) | Group `app/` into layered sub-packages (safety / rag / llm) by concern | accepted | 2026-08-11 |
+| [0008](0008-app-datastore-postgres.md) | A separate Postgres app datastore (SQLAlchemy + Alembic) for users/conversations/feedback | accepted | 2026-08-11 |
+| [0009](0009-auth-jwt.md) | Authentication via JWT bearer tokens | accepted | 2026-08-11 |

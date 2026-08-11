@@ -1,11 +1,12 @@
 ---
-status: in-progress
+status: done
 updated: 2026-08-11
 depends_on: [0009]
 decision: [0005, 0006]
 ---
 
-> 🚧 **IN PROGRESS — one decision pending.** Landed and committed:
+> ✅ **DONE.** The frontend renders the conversation, collapsible tool-call steps, the result table, and
+> token/cost — styled, bilingual, regression-tested, browser-verified. Landed and committed:
 > 1. **Crash fix:** the `0.11.58` React-19 `useLocalRuntime` crash (`_getInitializePromise`) — resolved by
 >    upgrading to assistant-ui `0.15`, browser-verified; plus a **vitest + jsdom** mount/stream suite and a
 >    **frontend CI job** so the crash class can't ship "done" again.
@@ -15,8 +16,8 @@ decision: [0005, 0006]
 >    as a real table** ([decision 0006](../../decisions/0006-structured-results-over-sse.md)) instead of
 >    backend-formatted Markdown. Browser-verified.
 > 3. **Toolchain modernized** (separate concern, done alongside): Vite 8, TypeScript 7, Biome lint/format.
-> 4. **Pending your call:** Chainlit-parity features that were never actually scoped — auth, feedback,
->    history/persistence, multi-turn. To be written up as separate tasks/decisions before any build.
+> 4. **Chainlit-parity scope now decided** — multi-turn, auth, history/persistence, and feedback are
+>    scheduled as their own tasks **0016 / 0018 / 0019 / 0020** (with decisions 0008 JWT-store note / 0009).
 
 # 0010 — Vite + React + TypeScript frontend (assistant-ui)
 
@@ -54,8 +55,9 @@ assistant-ui is frontend-only; we own the API and the SSE protocol.
 - [x] **Regression guard** — a `vitest` + `@testing-library/react` (jsdom) suite that mounts `<App />`
       (catches mount-time runtime crashes) and drives a mocked SSE stream (tool-call steps → answer → usage);
       a `frontend` CI job runs `pnpm build` + `pnpm test`. `pnpm test` green (2/2).
-- [ ] **Decide Chainlit-parity scope** (auth / feedback / history / multi-turn) — separate tasks/decisions.
-- [ ] Commit (per-task branch); flip `status: done`.
+- [x] **Chainlit-parity scope decided** (auth / feedback / history / multi-turn) → scheduled as tasks
+      0016 / 0018 / 0019 / 0020 (+ decisions 0008, 0009).
+- [x] Committed and `status: done`.
 
 ---
 Log → [`discussion.md`](discussion.md)

@@ -30,11 +30,19 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 | [0007](0007-llm-client/) | LLM client — OpenAI-compatible + mock provider (default) + prompts + tool schemas + per-call token/cost accounting | done | 0001 |
 | [0008](0008-agentic-loop/) | Agentic orchestration — bounded tool-loop (`search_schema` + `run_sql`) + hardened execution + **execution-guided self-correction** (feed DB errors/empty results back for a repair pass), tested | done | 0004, 0006, 0007 |
 | [0009](0009-streaming-api/) | Agent **event-streaming** + **FastAPI SSE API** (backend we own) — refactor the loop to emit events (tool start → SQL → rows → answer → usage) + a `/chat` SSE endpoint + `/health` | done | 0008 |
-| [0010](0010-react-frontend/) | **Vite + React + TypeScript frontend** (assistant-ui) — styled `Thread` + **tool-call step rendering** (decision 0005), regression tests + CI, browser-verified. Pending: decide Chainlit-parity scope (auth/feedback/history/multi-turn) | in-progress | 0009 |
+| [0010](0010-react-frontend/) | **Vite + React + TypeScript frontend** (assistant-ui) — styled `Thread` + **tool-call step rendering** + structured result table (decisions 0005/0006), regression tests + CI, browser-verified. Chainlit-parity scope now decided → decomposed into 0016/0018/0019/0020 | done | 0009 |
 | 0011 | **Stretch:** standalone read-only SQL MCP server (schema-search + `run_sql` tools) over the synthetic DB | proposed | 0004, 0006 |
 | [0012](0012-eval-harness/) | **Evaluation harness** — a golden `(question → gold SQL)` set + an execution-accuracy runner (compare result sets, not string match) wired into CI; plus `docs/failure-modes.md` | done | 0008 |
 | 0013 | Dev-experience polish — `.pre-commit-config.yaml` (ruff + ruff-format + mypy) + coverage reporting (`pytest-cov`) in CI | proposed | 0001 |
-| 0014 | **Deploy live** (the showcase must be clickable) — full docker-compose (API + built frontend + MySQL), a hosted URL, README + `ai-workflow.md` finalization | proposed | 0010 |
+| [0015](0015-real-llm-config/) | **Real-LLM config** — point the OpenAI-compatible client at a local **Ollama/vLLM** endpoint (base URL / model / optional key) via env; mock stays the default; verify end-to-end + document | in-progress | 0007, 0009 |
+| 0016 | **Multi-turn conversation** — thread conversation history through `/chat` + the agent loop + the frontend adapter (follow-ups get context) | proposed | 0009, 0010 |
+| 0017 | **App persistence foundation** — a separate **Postgres** service + SQLAlchemy (async) + Alembic; schema for `users` / `conversations` / `messages` / `feedback` ([decision 0008](../decisions/0008-app-datastore-postgres.md)) | proposed | 0001 |
+| 0018 | **Auth (JWT)** — register/login, bcrypt password hashing, signed JWT, protected `/chat`, React login UI ([decision 0009](../decisions/0009-auth-jwt.md)) | proposed | 0017, 0010 |
+| 0019 | **Conversation history + thread-list UI** — persist conversations/messages and reload them (backed by 0017; the UI thread list) | proposed | 0016, 0017 |
+| 0020 | **Feedback 👍/👎 (persisted)** — thumbs on answers saved to the `feedback` table (feeds the few-shot-curation idea) | proposed | 0017, 0010 |
+| 0021 | **Result charts** — render a bar/line (**Recharts**) when the query result shape fits | proposed | 0010 |
+| 0022 | **Rate limiting + deploy modes** — per-IP limit on `/chat` + config for the two deploy flavors (mock-only · real-LLM-with-limits) | proposed | 0009, 0015 |
+| 0014 | **Deploy live** (the showcase must be clickable) — full docker-compose (API + built frontend + MySQL + Postgres), a hosted URL, README + `ai-workflow.md` finalization. **Sequenced last**, after 0015–0022 | proposed | 0010, 0018, 0022 |
 
 ## Backlog — open, unscheduled
 
@@ -71,6 +79,10 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 - [0009](0009-streaming-api/) — agent refactored to **stream events** (`stream_answer`; `answer_question`
   folds them) + a **FastAPI SSE `/chat`** API (`app/api.py`) + `/health`. Streams tool steps + generated
   SQL + answer + token/cost live. The backend we own for the custom UI. 4 unit + 1 integration test.
+- [0010](0010-react-frontend/) — **Vite + React 19 + TS** frontend with assistant-ui's styled `Thread`
+  (shadcn/Tailwind): SSE events → native **tool-call steps** + a **result table** from structured rows
+  (decisions 0005/0006), bilingual, prose answers, token/cost. Toolchain: Vite 8 / TS 7 / Biome. Regression
+  suite (vitest/jsdom) + frontend CI job; browser-verified. Chainlit-parity split into 0016/0018/0019/0020.
 - [0012](0012-eval-harness/) — **evaluation harness** (`evaluation/`): 8 gold cases + an execution-accuracy
   runner (result-set compare, not string match) → **8/8 = 100%** mock accuracy, wired into CI; plus
   `docs/failure-modes.md`. The headline "how well / where it breaks" artifact. 2 unit + 1 integration test.
