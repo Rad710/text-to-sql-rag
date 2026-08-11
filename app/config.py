@@ -58,6 +58,9 @@ class Settings:
     db_password: str = ""
     db_name: str = "dyrtransportes"
 
+    # App datastore — a separate writable Postgres (decision 0008), async SQLAlchemy DSN.
+    app_database_url: str = "postgresql+asyncpg://app:app@localhost:5432/dyr_app"
+
     # Safety / agent limits.
     result_limit: int = 500
     agent_max_iterations: int = 6
@@ -91,6 +94,9 @@ def get_settings() -> Settings:
         db_user=_get("DB_USER", "llm_readonly"),
         db_password=_get("DB_PASSWORD", ""),
         db_name=_get("DB_NAME", "dyrtransportes"),
+        app_database_url=_get(
+            "APP_DATABASE_URL", "postgresql+asyncpg://app:app@localhost:5432/dyr_app"
+        ),
         result_limit=_get_int("RESULT_LIMIT", 500),
         agent_max_iterations=_get_int("AGENT_MAX_ITERATIONS", 6),
         statement_timeout_ms=_get_int("STATEMENT_TIMEOUT_MS", 5000),

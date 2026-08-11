@@ -36,7 +36,7 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 | 0013 | Dev-experience polish — `.pre-commit-config.yaml` (ruff + ruff-format + mypy) + coverage reporting (`pytest-cov`) in CI | proposed | 0001 |
 | [0015](0015-real-llm-config/) | **Real-LLM config** — point the OpenAI-compatible client at a local **Ollama/vLLM** endpoint (base URL / model / optional key) via env; mock stays the default; verify + document | done | 0007, 0009 |
 | [0016](0016-multi-turn/) | **Multi-turn conversation** — thread conversation history through `/chat` + the agent loop + the frontend adapter (follow-ups get context) | done | 0009, 0010 |
-| 0017 | **App persistence foundation** — a separate **Postgres** service + SQLAlchemy (async) + Alembic; schema for `users` / `conversations` / `messages` / `feedback` ([decision 0008](../decisions/0008-app-datastore-postgres.md)) | proposed | 0001 |
+| [0017](0017-app-persistence-foundation/) | **App persistence foundation** — a separate **Postgres** service + SQLAlchemy (async) + Alembic; schema for `users` / `conversations` / `messages` / `feedback` ([decision 0008](../decisions/0008-app-datastore-postgres.md)) | in-progress | 0001 |
 | 0018 | **Auth (JWT)** — register/login, bcrypt password hashing, signed JWT, protected `/chat`, React login UI ([decision 0009](../decisions/0009-auth-jwt.md)) | proposed | 0017, 0010 |
 | 0019 | **Conversation history + thread-list UI** — persist conversations/messages and reload them (backed by 0017; the UI thread list) | proposed | 0016, 0017 |
 | 0020 | **Feedback 👍/👎 (persisted)** — thumbs on answers saved to the `feedback` table (feeds the few-shot-curation idea) | proposed | 0017, 0010 |
