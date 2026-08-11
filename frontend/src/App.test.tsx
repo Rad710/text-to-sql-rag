@@ -95,11 +95,17 @@ test("authenticated: renders tool steps + result table + answer, and sends the B
   expect(body.history).toEqual([]);
 
   // 👍 on the answer posts feedback for the streamed message id (task 0020).
-  await userEvent.click(await screen.findByRole("button", { name: /buena respuesta/i }));
+  const thumbUp = await screen.findByRole("button", { name: /buena respuesta/i });
+  await userEvent.click(thumbUp);
   const fb = fetchMock.mock.calls.find((c) => String(c[0]) === "/feedback");
   if (!fb) throw new Error("expected a /feedback POST");
   expect(JSON.parse((fb[1] as RequestInit).body as string)).toEqual({
     message_id: "msg-9",
     rating: 1,
   });
+  // The chosen rating is highlighted so the user sees it registered (task 0027).
+  expect(thumbUp).toHaveAttribute("data-submitted", "true");
+  expect(screen.getByRole("button", { name: /mala respuesta/i })).not.toHaveAttribute(
+    "data-submitted",
+  );
 });

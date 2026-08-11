@@ -47,6 +47,7 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 | [0024](0024-env-file-config/) | **Single `.env` as source of truth** — complete `.env.example`; README + DEPLOY use `.env` instead of inline env on the command line | done | 0014, 0022 |
 | [0025](0025-multiturn-scroll-fix/) | **Fix runaway layout on the 2nd message** — pin the height cascade (`html/body/#root`) so the thread scrolls internally; + e2e regression guard | done | 0010, 0023 |
 | [0026](0026-responsive-sidebar/) | **Responsive sidebar (mobile drawer)** — off-canvas hamburger drawer + backdrop on mobile, static column on desktop; + e2e geometry test | done | 0019, 0023 |
+| [0027](0027-feedback-highlight/) | **Highlight selected 👍/👎** — style the `data-submitted` state so the chosen rating is filled/primary | done | 0020 |
 
 ## Backlog — open, unscheduled
 
@@ -106,6 +107,10 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 - [0020](0020-feedback/) — **feedback 👍/👎**: `POST /feedback` (owner-checked upsert, one per message);
   `/chat` emits the assistant message id + `GET /conversations/{id}` carries ids; thumbs in the action bar
   (idiomatic assistant-ui `FeedbackAdapter`) POST it. Integration + browser-verified (row in Postgres).
+- [0027](0027-feedback-highlight/) — **feedback highlight**: clicking 👍/👎 gave no confirmation. The
+  assistant-ui primitives already set `data-submitted` on the chosen button; added a style for it
+  (`data-[submitted]:text-primary` + filled svg) so the selected thumb is filled/primary and clicking the
+  other flips it. App.test asserts the highlight. Browser-verified.
 - [0026](0026-responsive-sidebar/) — **responsive sidebar**: the fixed 240px sidebar crushed the chat on
   phones (bubbles wrapped one letter per line). Now a static column on desktop and an **off-canvas
   drawer** on mobile — a `md:hidden` hamburger slides it in over a dimmed backdrop, and it auto-closes on

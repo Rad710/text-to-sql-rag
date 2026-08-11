@@ -446,10 +446,25 @@ const AssistantActionBar: FC = () => {
       <ActionBarPrimitive.Reload render={<TooltipIconButton tooltip="Refresh" />}>
         <RefreshCwIcon />
       </ActionBarPrimitive.Reload>
-      <ActionBarPrimitive.FeedbackPositive render={<TooltipIconButton tooltip="Buena respuesta" />}>
+      <ActionBarPrimitive.FeedbackPositive
+        render={
+          <TooltipIconButton
+            tooltip="Buena respuesta"
+            // Highlight the chosen rating: assistant-ui sets data-submitted on the selected button.
+            className="data-[submitted]:text-primary data-[submitted]:[&_svg]:fill-current"
+          />
+        }
+      >
         <ThumbsUpIcon />
       </ActionBarPrimitive.FeedbackPositive>
-      <ActionBarPrimitive.FeedbackNegative render={<TooltipIconButton tooltip="Mala respuesta" />}>
+      <ActionBarPrimitive.FeedbackNegative
+        render={
+          <TooltipIconButton
+            tooltip="Mala respuesta"
+            className="data-[submitted]:text-primary data-[submitted]:[&_svg]:fill-current"
+          />
+        }
+      >
         <ThumbsDownIcon />
       </ActionBarPrimitive.FeedbackNegative>
       <ActionBarMorePrimitive.Root>
