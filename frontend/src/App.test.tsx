@@ -26,7 +26,7 @@ const SSE_FRAMES = [
   'event: tool_start\ndata: {"name": "search_schema", "arguments": {"question": "q"}}\n\n',
   'event: tool_result\ndata: {"name": "search_schema", "preview": "table shipment(...)"}\n\n',
   'event: tool_start\ndata: {"name": "run_sql", "arguments": {"query": "SELECT 1"}}\n\n',
-  'event: tool_result\ndata: {"name": "run_sql", "columns": ["revenue"], "rows": [["8000000"]], "row_count": 1, "truncated": false}\n\n',
+  'event: tool_result\ndata: {"name": "run_sql", "columns": ["ruta", "ingresos"], "rows": [["Asunción", "8000000"], ["Encarnación", "5200000"]], "row_count": 2, "truncated": false}\n\n',
   'event: answer\ndata: {"text": "Consulté la base de datos para responder."}\n\n',
   'event: usage\ndata: {"iterations": 3, "total_tokens": 3400, "cost_usd": 0}\n\n',
   'event: message\ndata: {"id": "msg-9"}\n\n',
@@ -72,10 +72,19 @@ test("authenticated: renders tool steps + result table + answer, and sends the B
 
   expect(await screen.findByText(/2 tool calls/i)).toBeInTheDocument();
   expect(screen.getByRole("table")).toBeInTheDocument();
-  expect(screen.getByRole("columnheader", { name: "revenue" })).toBeInTheDocument();
+  expect(screen.getByRole("columnheader", { name: "ruta" })).toBeInTheDocument();
+  expect(screen.getByRole("columnheader", { name: "ingresos" })).toBeInTheDocument();
+  expect(screen.getByRole("cell", { name: "Asunción" })).toBeInTheDocument();
   expect(screen.getByRole("cell", { name: "8000000" })).toBeInTheDocument();
   expect(screen.getByText(/Consulté la base de datos/)).toBeInTheDocument();
   expect(screen.getByText(/3 steps · 3400 tokens · \$0\.0000/)).toBeInTheDocument();
+
+  // The result is chartable (label + numeric, 2 rows), so a Tabla/Gráfico toggle appears (task 0021).
+  // Switching to Gráfico lazy-loads the Recharts chart; the table view is the default.
+  await userEvent.click(screen.getByRole("button", { name: /gráfico/i }));
+  expect(await screen.findByTestId("result-chart")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: /tabla/i }));
+  expect(screen.getByRole("table")).toBeInTheDocument();
 
   const chatCall = fetchMock.mock.calls.find((c) => String(c[0]) === "/chat");
   expect(chatCall).toBeDefined();

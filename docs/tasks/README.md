@@ -40,13 +40,12 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 | [0018](0018-auth-jwt/) | **Auth (JWT)** — register/login, bcrypt password hashing, signed JWT, protected `/chat`, React login UI ([decision 0009](../decisions/0009-auth-jwt.md)) | done | 0017, 0010 |
 | [0019](0019-conversation-history/) | **Conversation history + thread-list UI** — persist conversations/messages and reload them (backed by 0017; the UI thread list) | done | 0016, 0017 |
 | [0020](0020-feedback/) | **Feedback 👍/👎 (persisted)** — thumbs on answers saved to the `feedback` table (feeds the few-shot-curation idea) | done | 0017, 0010 |
-| 0021 | **Result charts** — render a bar/line (**Recharts**) when the query result shape fits | proposed | 0010 |
+| [0021](0021-result-charts/) | **Result charts** — render a bar/line (**Recharts**) when the query result shape fits | done | 0010 |
 | 0022 | **Rate limiting + deploy modes** — per-IP limit on `/chat` + config for the two deploy flavors (mock-only · real-LLM-with-limits) | proposed | 0009, 0015 |
 | 0014 | **Deploy live** (the showcase must be clickable) — full docker-compose (API + built frontend + MySQL + Postgres), a hosted URL, README + `ai-workflow.md` finalization. **Sequenced last**, after 0015–0022 | proposed | 0010, 0018, 0022 |
 
 ## Backlog — open, unscheduled
 
-- Query result → optional chart (the UI renders a simple bar/line when the shape fits)
 - Few-shot example curation from a feedback table (thumbs up/down persisted, promoted to the corpus)
 - Enrich the schema corpus with column descriptions + sample values (stronger schema-linking)
 - Postgres dialect variant (prove the safety layer is dialect-parameterised)
@@ -103,6 +102,11 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 - [0020](0020-feedback/) — **feedback 👍/👎**: `POST /feedback` (owner-checked upsert, one per message);
   `/chat` emits the assistant message id + `GET /conversations/{id}` carries ids; thumbs in the action bar
   (idiomatic assistant-ui `FeedbackAdapter`) POST it. Integration + browser-verified (row in Postgres).
+- [0021](0021-result-charts/) — **result charts**: a pure `analyzeResult` fit-heuristic (`frontend/src/lib/
+  chart-data.ts`) + a `ResultView` with a **Tabla/Gráfico** toggle that `React.lazy`-loads a Recharts
+  bar/line (`result-chart.tsx`, split to its own chunk). Bar for a categorical/composite axis (`origin ·
+  destination`), line for a single temporal column; multi-series for extra numeric columns. 13 unit cases +
+  App.test toggle assertion; browser-verified (bar + multi-series), 0 console errors.
 - [0012](0012-eval-harness/) — **evaluation harness** (`evaluation/`): 8 gold cases + an execution-accuracy
   runner (result-set compare, not string match) → **8/8 = 100%** mock accuracy, wired into CI; plus
   `docs/failure-modes.md`. The headline "how well / where it breaks" artifact. 2 unit + 1 integration test.
