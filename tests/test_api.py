@@ -24,8 +24,8 @@ class _NoopRecorder:
     async def start(self, *, user_id: str, conversation_id: str | None, question: str) -> str:
         return "conv-test"
 
-    async def finish(self, *, conversation_id: str, answer: str) -> None:
-        return None
+    async def finish(self, *, conversation_id: str, answer: str) -> str:
+        return "msg-test"
 
 
 def _t(name: str, *cols: str, pk: str, fks: tuple[ForeignKey, ...] = ()) -> Table:

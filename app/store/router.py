@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,6 +25,7 @@ class ConversationSummary(BaseModel):
 
 
 class MessageOut(BaseModel):
+    id: str
     role: str
     content: str
 
@@ -53,5 +54,25 @@ async def get_conversation(
     return ConversationDetail(
         id=conversation.id,
         title=conversation.title,
-        messages=[MessageOut(role=m.role, content=m.content) for m in conversation.messages],
+        messages=[
+            MessageOut(id=m.id, role=m.role, content=m.content) for m in conversation.messages
+        ],
     )
+
+
+feedback_router = APIRouter(prefix="/feedback", tags=["feedback"])
+
+
+class FeedbackRequest(BaseModel):
+    message_id: str
+    rating: Literal[-1, 1]  # 👎 / 👍
+
+
+@feedback_router.post("", status_code=status.HTTP_204_NO_CONTENT)
+async def submit_feedback(req: FeedbackRequest, user: CurrentUser, session: Session) -> Response:
+    ok = await convo.set_feedback(
+        session, user_id=user.id, message_id=req.message_id, rating=req.rating
+    )
+    if not ok:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "message not found")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

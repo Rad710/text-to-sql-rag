@@ -39,7 +39,7 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 | [0017](0017-app-persistence-foundation/) | **App persistence foundation** — a separate **Postgres** service + SQLAlchemy (async) + Alembic; schema for `users` / `conversations` / `messages` / `feedback` ([decision 0008](../decisions/0008-app-datastore-postgres.md)) | done | 0001 |
 | [0018](0018-auth-jwt/) | **Auth (JWT)** — register/login, bcrypt password hashing, signed JWT, protected `/chat`, React login UI ([decision 0009](../decisions/0009-auth-jwt.md)) | done | 0017, 0010 |
 | [0019](0019-conversation-history/) | **Conversation history + thread-list UI** — persist conversations/messages and reload them (backed by 0017; the UI thread list) | done | 0016, 0017 |
-| 0020 | **Feedback 👍/👎 (persisted)** — thumbs on answers saved to the `feedback` table (feeds the few-shot-curation idea) | proposed | 0017, 0010 |
+| [0020](0020-feedback/) | **Feedback 👍/👎 (persisted)** — thumbs on answers saved to the `feedback` table (feeds the few-shot-curation idea) | in-progress | 0017, 0010 |
 | 0021 | **Result charts** — render a bar/line (**Recharts**) when the query result shape fits | proposed | 0010 |
 | 0022 | **Rate limiting + deploy modes** — per-IP limit on `/chat` + config for the two deploy flavors (mock-only · real-LLM-with-limits) | proposed | 0009, 0015 |
 | 0014 | **Deploy live** (the showcase must be clickable) — full docker-compose (API + built frontend + MySQL + Postgres), a hosted URL, README + `ai-workflow.md` finalization. **Sequenced last**, after 0015–0022 | proposed | 0010, 0018, 0022 |

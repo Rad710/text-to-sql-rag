@@ -29,6 +29,7 @@ from app.rag.introspect import introspect_from_settings
 from app.rag.schema import SchemaInfo
 from app.store.conversations import ConversationRecorder, get_recorder
 from app.store.models import User
+from app.store.router import feedback_router
 from app.store.router import router as conversations_router
 
 app = FastAPI(title="text-to-sql-rag", version=__version__)
@@ -40,6 +41,7 @@ app.add_middleware(
 )
 app.include_router(auth_router)
 app.include_router(conversations_router)
+app.include_router(feedback_router)
 
 _service: tuple[RagStore, SchemaInfo] | None = None
 
@@ -110,6 +112,7 @@ async def chat(
             if event.type == "answer":
                 answer = str(event.data.get("text") or "")
             yield _sse(event)
-        await recorder.finish(conversation_id=conversation_id, answer=answer)
+        message_id = await recorder.finish(conversation_id=conversation_id, answer=answer)
+        yield _sse(AgentEvent("message", {"id": message_id}))  # UI attaches feedback here (0020)
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")

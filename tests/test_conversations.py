@@ -69,8 +69,28 @@ def test_chat_persists_and_history_is_isolated_per_user() -> None:
 
             detail = await ac.get(f"/conversations/{conv_id}", headers=auth_a)
             assert detail.status_code == 200
-            roles = [m["role"] for m in detail.json()["messages"]]
+            messages = detail.json()["messages"]
+            roles = [m["role"] for m in messages]
             assert "user" in roles and "assistant" in roles and len(roles) >= 2
+
+            # feedback on the assistant message (task 0020): upsert, owner-checked, validated
+            msg_id = next(m["id"] for m in messages if m["role"] == "assistant")
+            up = await ac.post(
+                "/feedback", json={"message_id": msg_id, "rating": 1}, headers=auth_a
+            )
+            assert up.status_code == 204
+            re_rate = await ac.post(
+                "/feedback", json={"message_id": msg_id, "rating": -1}, headers=auth_a
+            )
+            assert re_rate.status_code == 204  # idempotent upsert (one per message)
+            cross = await ac.post(
+                "/feedback", json={"message_id": msg_id, "rating": 1}, headers=auth_b
+            )
+            assert cross.status_code == 404  # not user B's message
+            bad = await ac.post(
+                "/feedback", json={"message_id": msg_id, "rating": 5}, headers=auth_a
+            )
+            assert bad.status_code == 422  # rating must be -1|1
 
             # user B cannot see user A's conversation, and has none of their own
             assert (await ac.get(f"/conversations/{conv_id}", headers=auth_b)).status_code == 404

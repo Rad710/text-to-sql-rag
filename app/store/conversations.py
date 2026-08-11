@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.store.engine import get_sessionmaker
-from app.store.models import Conversation, Message
+from app.store.models import Conversation, Feedback, Message
 
 _DEFAULT_TITLE = "Nueva conversación"
 
@@ -36,9 +36,36 @@ async def resolve_conversation(
 
 async def save_message(
     session: AsyncSession, *, conversation_id: str, role: str, content: str
-) -> None:
-    session.add(Message(conversation_id=conversation_id, role=role, content=content))
+) -> str:
+    message = Message(conversation_id=conversation_id, role=role, content=content)
+    session.add(message)
     await session.commit()
+    await session.refresh(message)
+    return message.id
+
+
+async def set_feedback(
+    session: AsyncSession, *, user_id: str, message_id: str, rating: int
+) -> bool:
+    """Upsert the (one) rating for a message the user owns. False if the message isn't theirs."""
+    owned = (
+        await session.execute(
+            select(Message)
+            .join(Conversation, Message.conversation_id == Conversation.id)
+            .where(Message.id == message_id, Conversation.user_id == user_id)
+        )
+    ).scalar_one_or_none()
+    if owned is None:
+        return False
+    existing = (
+        await session.execute(select(Feedback).where(Feedback.message_id == message_id))
+    ).scalar_one_or_none()
+    if existing is None:
+        session.add(Feedback(message_id=message_id, rating=rating))
+    else:
+        existing.rating = rating
+    await session.commit()
+    return True
 
 
 async def list_conversations(session: AsyncSession, *, user_id: str) -> list[Conversation]:
@@ -75,9 +102,10 @@ class ConversationRecorder:
             await save_message(session, conversation_id=cid, role="user", content=question)
         return cid
 
-    async def finish(self, *, conversation_id: str, answer: str) -> None:
+    async def finish(self, *, conversation_id: str, answer: str) -> str:
+        """Save the assistant answer; return its message id (so the client can attach feedback)."""
         async with get_sessionmaker()() as session:
-            await save_message(
+            return await save_message(
                 session, conversation_id=conversation_id, role="assistant", content=answer
             )
 
