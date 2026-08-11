@@ -85,6 +85,18 @@ def test_general_question_answered_directly() -> None:
     assert r.content
 
 
+def test_mock_keys_off_the_latest_user_turn() -> None:
+    """Multi-turn (task 0016): the mock answers the *latest* question, not the first."""
+    messages = [
+        SYS,
+        _user("hola, como estas"),
+        {"role": "assistant", "content": "¡Hola! ¿En qué puedo ayudarte?"},
+        _user("total revenue per route"),
+    ]
+    r = mock.complete(messages, TOOLS)
+    assert [tc.name for tc in r.tool_calls] == ["search_schema"]  # the DB question, not "hola"
+
+
 def test_usage_is_reported() -> None:
     r = mock.complete([SYS, _user("total revenue per route")], TOOLS)
     assert r.usage.prompt_tokens > 0

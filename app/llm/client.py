@@ -125,7 +125,7 @@ class MockProvider:
         self, messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = None
     ) -> LlmResponse:
         settings = get_settings()
-        question = _first_user_message(messages)
+        question = _latest_user_message(messages)
         made = _tool_calls_made(messages)
         sql, score = _match_example(question)
         lang = _detect_lang(question)
@@ -207,8 +207,9 @@ def get_llm(settings: Settings | None = None) -> LlmProvider:
     return OpenAIProvider(resolved) if resolved.llm_mode == "openai" else MockProvider()
 
 
-def _first_user_message(messages: list[dict[str, Any]]) -> str:
-    for message in messages:
+def _latest_user_message(messages: list[dict[str, Any]]) -> str:
+    """The current question — the last user turn (multi-turn: not the first). Task 0016."""
+    for message in reversed(messages):
         if message.get("role") == "user":
             return str(message.get("content") or "")
     return ""

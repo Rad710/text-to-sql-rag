@@ -59,11 +59,20 @@ class AgentEvent:
 
 
 def stream_answer(
-    question: str, llm: LlmProvider, tools: AgentTools, max_iterations: int
+    question: str,
+    llm: LlmProvider,
+    tools: AgentTools,
+    max_iterations: int,
+    history: list[dict[str, Any]] | None = None,
 ) -> Iterator[AgentEvent]:
-    """Drive the bounded tool-loop, yielding events as it runs (the single source of truth)."""
+    """Drive the bounded tool-loop, yielding events as it runs (the single source of truth).
+
+    ``history`` is prior conversation turns (``{role, content}`` text) prepended before the current
+    question so the model has context for follow-ups (task 0016).
+    """
     messages: list[dict[str, Any]] = [
         {"role": "system", "content": SYSTEM_PROMPT},
+        *(history or []),
         {"role": "user", "content": question},
     ]
     usage = ZERO_USAGE
@@ -111,7 +120,11 @@ def _finish(usage: Usage, iterations: int) -> Iterator[AgentEvent]:
 
 
 def answer_question(
-    question: str, llm: LlmProvider, tools: AgentTools, max_iterations: int
+    question: str,
+    llm: LlmProvider,
+    tools: AgentTools,
+    max_iterations: int,
+    history: list[dict[str, Any]] | None = None,
 ) -> AgentResult:
     """Run the loop to completion and fold its events into an ``AgentResult``."""
     answer = _FALLBACK
@@ -120,7 +133,7 @@ def answer_question(
     usage = ZERO_USAGE
     iterations = 0
 
-    for event in stream_answer(question, llm, tools, max_iterations):
+    for event in stream_answer(question, llm, tools, max_iterations, history):
         if event.type == "tool_result":
             name, arguments = event.data["name"], event.data["arguments"]
             trace.append(ToolInvocation(name, arguments, event.data["preview"]))
@@ -191,12 +204,13 @@ def ask(
     schema: SchemaInfo,
     settings: Settings | None = None,
     llm: LlmProvider | None = None,
+    history: list[dict[str, Any]] | None = None,
 ) -> AgentResult:
     """High-level entry point used by the API: assemble tools + provider and run the loop."""
     resolved = settings or get_settings()
     provider = llm or get_llm(resolved)
     tools = build_tools(store, schema, resolved)
-    return answer_question(question, provider, tools, resolved.agent_max_iterations)
+    return answer_question(question, provider, tools, resolved.agent_max_iterations, history)
 
 
 def stream(
@@ -206,9 +220,10 @@ def stream(
     schema: SchemaInfo,
     settings: Settings | None = None,
     llm: LlmProvider | None = None,
+    history: list[dict[str, Any]] | None = None,
 ) -> Iterator[AgentEvent]:
     """Streaming counterpart of :func:`ask` — yields agent events for the SSE endpoint."""
     resolved = settings or get_settings()
     provider = llm or get_llm(resolved)
     tools = build_tools(store, schema, resolved)
-    return stream_answer(question, provider, tools, resolved.agent_max_iterations)
+    return stream_answer(question, provider, tools, resolved.agent_max_iterations, history)

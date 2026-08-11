@@ -154,6 +154,30 @@ def test_stream_self_correction_emits_two_run_sql() -> None:
     assert [r.data["arguments"]["query"] for r in runs] == ["SELECT bad", "SELECT good"]
 
 
+def test_history_is_prepended_before_the_question() -> None:
+    """Prior turns are threaded into the LLM messages ahead of the current question (task 0016)."""
+    captured: list[dict[str, Any]] = []
+
+    class CapturingLLM:
+        def complete(
+            self, messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = None
+        ) -> LlmResponse:
+            captured.extend(messages)
+            return _answer("ok")
+
+    history = [
+        {"role": "user", "content": "first question"},
+        {"role": "assistant", "content": "first answer"},
+    ]
+    answer_question(
+        "second question", CapturingLLM(), _tools(lambda q: RunResult(sql=q)), 6, history
+    )
+    pairs = [(m["role"], m["content"]) for m in captured]
+    assert ("user", "first question") in pairs
+    assert ("assistant", "first answer") in pairs
+    assert captured[-1] == {"role": "user", "content": "second question"}
+
+
 @pytest.mark.integration
 def test_ask_end_to_end(tmp_path: Any) -> None:
     """Real mock LLM + real RAG store + live MySQL: question → answer."""

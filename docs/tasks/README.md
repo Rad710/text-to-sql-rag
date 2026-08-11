@@ -35,7 +35,7 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 | [0012](0012-eval-harness/) | **Evaluation harness** — a golden `(question → gold SQL)` set + an execution-accuracy runner (compare result sets, not string match) wired into CI; plus `docs/failure-modes.md` | done | 0008 |
 | 0013 | Dev-experience polish — `.pre-commit-config.yaml` (ruff + ruff-format + mypy) + coverage reporting (`pytest-cov`) in CI | proposed | 0001 |
 | [0015](0015-real-llm-config/) | **Real-LLM config** — point the OpenAI-compatible client at a local **Ollama/vLLM** endpoint (base URL / model / optional key) via env; mock stays the default; verify + document | done | 0007, 0009 |
-| 0016 | **Multi-turn conversation** — thread conversation history through `/chat` + the agent loop + the frontend adapter (follow-ups get context) | proposed | 0009, 0010 |
+| [0016](0016-multi-turn/) | **Multi-turn conversation** — thread conversation history through `/chat` + the agent loop + the frontend adapter (follow-ups get context) | done | 0009, 0010 |
 | 0017 | **App persistence foundation** — a separate **Postgres** service + SQLAlchemy (async) + Alembic; schema for `users` / `conversations` / `messages` / `feedback` ([decision 0008](../decisions/0008-app-datastore-postgres.md)) | proposed | 0001 |
 | 0018 | **Auth (JWT)** — register/login, bcrypt password hashing, signed JWT, protected `/chat`, React login UI ([decision 0009](../decisions/0009-auth-jwt.md)) | proposed | 0017, 0010 |
 | 0019 | **Conversation history + thread-list UI** — persist conversations/messages and reload them (backed by 0017; the UI thread list) | proposed | 0016, 0017 |
@@ -83,6 +83,12 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
   (shadcn/Tailwind): SSE events → native **tool-call steps** + a **result table** from structured rows
   (decisions 0005/0006), bilingual, prose answers, token/cost. Toolchain: Vite 8 / TS 7 / Biome. Regression
   suite (vitest/jsdom) + frontend CI job; browser-verified. Chainlit-parity split into 0016/0018/0019/0020.
+- [0015](0015-real-llm-config/) — **real-LLM config** verified + documented: the OpenAI-compatible client
+  targets a local **Ollama/vLLM** via `LLM_MODE=openai` + `LLM_BASE_URL`/`LLM_MODEL` (wiring pre-existed
+  from 0007); mock stays default. Unit test for the base_url/model wiring + README section.
+- [0016](0016-multi-turn/) — **multi-turn**: `/chat` carries `history` (a `Turn` list), threaded through the
+  agent loop (`[system, *history, question]`); mock keys off the latest turn; the frontend sends prior turns
+  (footer stripped). Browser-verified (turn 2's POST carries clean context). 104 backend tests.
 - [0012](0012-eval-harness/) — **evaluation harness** (`evaluation/`): 8 gold cases + an execution-accuracy
   runner (result-set compare, not string match) → **8/8 = 100%** mock accuracy, wired into CI; plus
   `docs/failure-modes.md`. The headline "how well / where it breaks" artifact. 2 unit + 1 integration test.

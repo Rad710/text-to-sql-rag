@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterator
+from typing import Literal
 
 import pymysql
 from fastapi import Depends, FastAPI, HTTPException
@@ -54,8 +55,16 @@ def get_service() -> tuple[RagStore, SchemaInfo]:
     return _service
 
 
+class Turn(BaseModel):
+    """One prior conversation turn (text only) — the agent's tool-call trace is not replayed."""
+
+    role: Literal["user", "assistant"]
+    content: str
+
+
 class ChatRequest(BaseModel):
     question: str
+    history: list[Turn] = []
 
 
 @app.get("/health")
@@ -75,8 +84,10 @@ def chat(
     """Answer a question, streaming the agent's events as Server-Sent Events."""
     store, schema = service
 
+    history = [turn.model_dump() for turn in req.history]
+
     def event_stream() -> Iterator[str]:
-        for event in stream(req.question, store=store, schema=schema):
+        for event in stream(req.question, store=store, schema=schema, history=history):
             yield _sse(event)
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")

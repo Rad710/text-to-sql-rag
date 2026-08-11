@@ -57,6 +57,10 @@ test("renders tool-call steps, the result table, the answer and the usage footer
   // Both tool_start events become tool-call parts → a "2 tool calls" step group.
   expect(await screen.findByText(/2 tool calls/i)).toBeInTheDocument();
   expect(fetchMock).toHaveBeenCalledWith("/chat", expect.objectContaining({ method: "POST" }));
+  // The request carries the question + conversation history (empty on the first turn) — task 0016.
+  const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
+  expect(body.question).toMatch(/facturación total por ruta/);
+  expect(body.history).toEqual([]);
   // run_sql's structured rows render as a real table (not backend Markdown).
   expect(screen.getByRole("table")).toBeInTheDocument();
   expect(screen.getByRole("columnheader", { name: "revenue" })).toBeInTheDocument();

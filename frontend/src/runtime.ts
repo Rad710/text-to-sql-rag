@@ -1,8 +1,17 @@
 import type {
   ChatModelAdapter,
   ThreadAssistantMessagePart,
+  ThreadMessage,
   ToolCallMessagePart,
 } from "@assistant-ui/react";
+
+/** Join a message's text parts (ignoring tool-call/other parts) into a plain string. */
+function messageText(message: ThreadMessage): string {
+  return message.content
+    .map((part) => (part.type === "text" ? part.text : ""))
+    .join(" ")
+    .trim();
+}
 
 // One Server-Sent Event from our FastAPI /chat stream.
 type SSEEvent = { type: string; data: Record<string, unknown> };
@@ -42,16 +51,24 @@ async function* parseSSE(body: ReadableStream<Uint8Array>): AsyncGenerator<SSEEv
  */
 export const adapter: ChatModelAdapter = {
   async *run({ messages, abortSignal }) {
-    const last = messages[messages.length - 1];
-    const question = last.content
-      .map((part) => (part.type === "text" ? part.text : ""))
-      .join(" ")
-      .trim();
+    const question = messageText(messages[messages.length - 1]);
+    // Prior turns (text only) so the backend can give the model conversational context (task 0016).
+    const history = messages
+      .slice(0, -1)
+      .filter((m) => m.role === "user" || m.role === "assistant")
+      .map((m) => ({
+        role: m.role,
+        // Drop the UI-only token/cost footer from assistant turns — it's chrome, not conversation.
+        content: messageText(m)
+          .replace(/\n*`[^`\n]*·[^`\n]*`\s*$/, "")
+          .trim(),
+      }))
+      .filter((turn) => turn.content);
 
     const res = await fetch("/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question }),
+      body: JSON.stringify({ question, history }),
       signal: abortSignal,
     });
     if (!res.ok || !res.body) {

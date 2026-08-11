@@ -66,6 +66,30 @@ def test_chat_requires_question(client: TestClient) -> None:
     assert client.post("/chat", json={}).status_code == 422
 
 
+def test_chat_accepts_conversation_history(client: TestClient) -> None:
+    """The /chat contract carries prior turns for multi-turn context (task 0016)."""
+    resp = client.post(
+        "/chat",
+        json={
+            "question": "total freight revenue per route",
+            "history": [
+                {"role": "user", "content": "hola"},
+                {"role": "assistant", "content": "¡Hola!"},
+            ],
+        },
+    )
+    assert resp.status_code == 200
+    assert "event: answer" in resp.text
+
+
+def test_chat_rejects_bad_history_role(client: TestClient) -> None:
+    resp = client.post(
+        "/chat",
+        json={"question": "x", "history": [{"role": "robot", "content": "hi"}]},
+    )
+    assert resp.status_code == 422  # role must be user|assistant
+
+
 @pytest.mark.integration
 def test_chat_end_to_end_live() -> None:
     import pymysql
