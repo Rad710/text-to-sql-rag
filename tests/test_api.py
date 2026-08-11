@@ -146,7 +146,16 @@ def test_chat_end_to_end_live() -> None:
 
     api._service = None  # force a fresh build against the live DB
     app.dependency_overrides.clear()
-    resp = TestClient(app).post("/chat", json={"question": "total freight revenue per route"})
-    assert resp.status_code == 200
-    assert "event: answer" in resp.text
-    assert "run_sql" in resp.text
+    # This test exercises the agent against live MySQL, not auth/persistence: stub the authenticated
+    # user (0018) + a no-op recorder (0019) so we need no Bearer token and no real user row.
+    app.dependency_overrides[get_current_user] = lambda: User(
+        id="u1", email="tester@dyr.test", name="Tester", password_hash="x"
+    )
+    app.dependency_overrides[get_recorder] = lambda: _NoopRecorder()
+    try:
+        resp = TestClient(app).post("/chat", json={"question": "total freight revenue per route"})
+        assert resp.status_code == 200
+        assert "event: answer" in resp.text
+        assert "run_sql" in resp.text
+    finally:
+        app.dependency_overrides.clear()
