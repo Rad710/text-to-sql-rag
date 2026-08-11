@@ -117,7 +117,8 @@ def get_settings() -> Settings:
         app_database_url=_get(
             "APP_DATABASE_URL", "postgresql+asyncpg://app:app@localhost:5432/dyr_app"
         ),
-        jwt_secret=_get("JWT_SECRET", "dev-insecure-change-me"),
+        # Dev default is ≥32 bytes (PyJWT warns below that for HS256); a real deploy overrides it.
+        jwt_secret=_get("JWT_SECRET", "dev-insecure-secret-change-me-in-production-0123456789"),
         jwt_algorithm=_get("JWT_ALGORITHM", "HS256"),
         jwt_expiry_min=_get_int("JWT_EXPIRY_MIN", 60 * 24),
         result_limit=_get_int("RESULT_LIMIT", 500),
