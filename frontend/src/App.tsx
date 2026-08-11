@@ -4,6 +4,7 @@ import {
   ThreadPrimitive,
   useLocalRuntime,
 } from "@assistant-ui/react";
+import { Menu } from "lucide-react";
 import { type FC, useCallback, useEffect, useState } from "react";
 
 import { Thread } from "@/components/assistant-ui/thread";
@@ -78,6 +79,7 @@ export default function App() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [initialMessages, setInitialMessages] = useState<ThreadMessageLike[]>([]);
   const [paneKey, setPaneKey] = useState(0); // bumped only to remount ChatPane (switch/new)
+  const [sidebarOpen, setSidebarOpen] = useState(false); // mobile drawer (task 0026)
 
   const refreshList = useCallback(() => {
     listConversations().then(setConversations);
@@ -107,6 +109,7 @@ export default function App() {
     setInitialMessages([]);
     setActiveId(null);
     setPaneKey((k) => k + 1);
+    setSidebarOpen(false); // close the mobile drawer after acting
   }, []);
 
   const openConversation = useCallback(async (id: string) => {
@@ -118,6 +121,7 @@ export default function App() {
     setInitialMessages(messages.map((m) => ({ role: m.role, content: m.content })));
     setActiveId(id);
     setPaneKey((k) => k + 1);
+    setSidebarOpen(false); // close the mobile drawer after selecting
   }, []);
 
   const logout = useCallback(() => {
@@ -143,13 +147,23 @@ export default function App() {
   return (
     <TooltipProvider>
       <div className="flex h-full flex-col">
-        <header className="border-border flex items-center justify-between gap-3 border-b px-6 py-3.5">
-          <div className="flex items-baseline gap-3">
-            <span className="font-semibold">🚚 DYR Transportes — Data Assistant</span>
-            <span className="text-muted-foreground text-xs">text-to-SQL · RAG · mock mode</span>
+        <header className="border-border flex items-center justify-between gap-3 border-b px-4 py-3.5 md:px-6">
+          <div className="flex min-w-0 items-center gap-2 md:gap-3">
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Abrir conversaciones"
+              className="text-muted-foreground hover:text-foreground -ml-1 shrink-0 md:hidden"
+            >
+              <Menu className="size-5" />
+            </button>
+            <span className="truncate font-semibold">🚚 DYR Transportes — Data Assistant</span>
+            <span className="text-muted-foreground hidden text-xs sm:inline">
+              text-to-SQL · RAG · mock mode
+            </span>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-muted-foreground text-xs">{user.name}</span>
+          <div className="flex shrink-0 items-center gap-3">
+            <span className="text-muted-foreground hidden text-xs sm:inline">{user.name}</span>
             <button
               type="button"
               onClick={logout}
@@ -159,12 +173,14 @@ export default function App() {
             </button>
           </div>
         </header>
-        <div className="flex min-h-0 flex-1">
+        <div className="relative flex min-h-0 flex-1">
           <ConversationList
             conversations={conversations}
             activeId={activeId}
             onSelect={openConversation}
             onNew={startNew}
+            open={sidebarOpen}
+            onClose={() => setSidebarOpen(false)}
           />
           <div className="min-h-0 flex-1">
             <ChatPane key={paneKey} initialMessages={initialMessages} />

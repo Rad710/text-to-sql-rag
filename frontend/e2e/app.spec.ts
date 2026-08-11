@@ -80,3 +80,30 @@ test("register surfaces a validation error for a short password", async ({ page 
   await page.getByRole("button", { name: /crear cuenta/i }).click();
   await expect(page.getByText(/al menos 8 caracteres/i)).toBeVisible();
 });
+
+// Mobile responsiveness (task 0026): the sidebar is an off-canvas drawer toggled by a hamburger, not a
+// squished fixed column. Assert the geometry — the drawer sits off-screen (negative x) until opened.
+test("mobile: the sidebar is an off-canvas drawer toggled by the hamburger", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 780 });
+  await page.goto("/");
+  await page.getByRole("button", { name: /registrate/i }).click();
+  await page.getByLabel("Nombre").fill("Mobile");
+  await page.getByLabel("Email").fill(uniqueEmail("mobile"));
+  await page.getByLabel("Contraseña").fill("secret12345");
+  await page.getByRole("button", { name: /crear cuenta/i }).click();
+  await expect(page.getByRole("heading", { name: /qué querés saber/i })).toBeVisible();
+
+  const hamburger = page.getByRole("button", { name: /abrir conversaciones/i });
+  await expect(hamburger).toBeVisible(); // hamburger only shows on mobile
+
+  const drawerBtn = page.getByRole("button", { name: /nueva conversación/i });
+  const closed = await drawerBtn.boundingBox();
+  expect(closed).not.toBeNull();
+  expect(closed?.x ?? 0).toBeLessThan(0); // drawer is off-canvas (translated out of view)
+
+  await hamburger.click();
+  await expect(async () => {
+    const open = await drawerBtn.boundingBox();
+    expect(open?.x ?? -1).toBeGreaterThanOrEqual(0); // slid into view
+  }).toPass();
+});
