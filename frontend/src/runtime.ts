@@ -80,7 +80,15 @@ export const adapter: ChatModelAdapter = {
         pending = tools.length - 1;
       } else if (evt.type === "tool_result") {
         const idx = pending >= 0 ? pending : tools.length - 1;
-        if (tools[idx]) tools[idx] = { ...tools[idx], result: evt.data.preview };
+        if (tools[idx]) {
+          const d = evt.data;
+          // run_sql carries structured rows (decision 0006) → the frontend renders the table;
+          // other tools carry a short text preview.
+          const result = Array.isArray(d.rows)
+            ? { columns: d.columns, rows: d.rows, rowCount: d.row_count, truncated: d.truncated }
+            : d.preview;
+          tools[idx] = { ...tools[idx], result };
+        }
         pending = -1;
       } else if (evt.type === "answer") {
         answer = String(evt.data.text ?? "");

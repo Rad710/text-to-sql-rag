@@ -39,17 +39,17 @@ test("mounts without crashing and shows the shell", async () => {
   expect(screen.getByRole("textbox", { name: /message input/i })).toBeInTheDocument();
 });
 
-// Full wiring in jsdom: a suggestion click POSTs to /chat, and the SSE tool events are mapped to
-// assistant-ui tool-call parts (rendered as a collapsible step group — decision 0005), followed by
-// the answer and the token/cost footer.
-test("renders tool-call steps, the answer and the usage footer", async () => {
+// Full wiring in jsdom: a suggestion click POSTs to /chat, the SSE tool events map to tool-call
+// parts (a step group — decision 0005), run_sql's structured rows render as a real table
+// (decision 0006), and the answer + token/cost footer follow.
+test("renders tool-call steps, the result table, the answer and the usage footer", async () => {
   const fetchMock = vi.fn().mockResolvedValue(
     sseResponse([
       'event: tool_start\ndata: {"name": "search_schema", "arguments": {"question": "q"}}\n\n',
       'event: tool_result\ndata: {"name": "search_schema", "preview": "table shipment(...)"}\n\n',
       'event: tool_start\ndata: {"name": "run_sql", "arguments": {"query": "SELECT 1"}}\n\n',
-      'event: tool_result\ndata: {"name": "run_sql", "preview": "n\\n42"}\n\n',
-      'event: answer\ndata: {"text": "Según la base de datos: 1 fila."}\n\n',
+      'event: tool_result\ndata: {"name": "run_sql", "columns": ["revenue"], "rows": [["8000000"]], "row_count": 1, "truncated": false}\n\n',
+      'event: answer\ndata: {"text": "Consulté la base de datos para responder."}\n\n',
       'event: usage\ndata: {"iterations": 3, "total_tokens": 3400, "cost_usd": 0}\n\n',
     ]),
   );
@@ -60,9 +60,13 @@ test("renders tool-call steps, the answer and the usage footer", async () => {
     await screen.findByRole("button", { name: /facturación total por ruta/i }),
   );
 
-  // Both tool_start events become tool-call parts → a collapsible "2 tool calls" step group.
+  // Both tool_start events become tool-call parts → a "2 tool calls" step group.
   expect(await screen.findByText(/2 tool calls/i)).toBeInTheDocument();
   expect(fetchMock).toHaveBeenCalledWith("/chat", expect.objectContaining({ method: "POST" }));
-  expect(screen.getByText(/Según la base de datos/)).toBeInTheDocument();
+  // run_sql's structured rows render as a real table (not backend Markdown).
+  expect(screen.getByRole("table")).toBeInTheDocument();
+  expect(screen.getByRole("columnheader", { name: "revenue" })).toBeInTheDocument();
+  expect(screen.getByRole("cell", { name: "8000000" })).toBeInTheDocument();
+  expect(screen.getByText(/Consulté la base de datos/)).toBeInTheDocument();
   expect(screen.getByText(/3 steps · 3400 tokens · \$0\.0000/)).toBeInTheDocument();
 });
