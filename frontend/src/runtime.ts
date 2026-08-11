@@ -6,6 +6,7 @@ import type {
 } from "@assistant-ui/react";
 
 import { getToken } from "./auth";
+import { getConversationId, notifyConversation } from "./conversation";
 
 /** Join a message's text parts (ignoring tool-call/other parts) into a plain string. */
 function messageText(message: ThreadMessage): string {
@@ -74,7 +75,7 @@ export const adapter: ChatModelAdapter = {
         "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: JSON.stringify({ question, history }),
+      body: JSON.stringify({ question, history, conversation_id: getConversationId() }),
       signal: abortSignal,
     });
     if (!res.ok || !res.body) {
@@ -120,6 +121,9 @@ export const adapter: ChatModelAdapter = {
         const d = evt.data;
         const cost = Number(d.cost_usd ?? 0).toFixed(4);
         usage = `\`${d.iterations} steps · ${d.total_tokens} tokens · $${cost}\``;
+      } else if (evt.type === "conversation") {
+        notifyConversation(String(evt.data.id)); // task 0019 — remember which conversation this is
+        continue;
       } else {
         continue; // e.g. "done"
       }

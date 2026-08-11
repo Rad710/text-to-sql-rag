@@ -15,3 +15,13 @@ Append-only. Newest at the bottom, each entry dated.
   test (`test_conversations.py`, single-loop httpx): register two users → chat persists → `GET
   /conversations` lists it → `GET /conversations/{id}` returns the messages → the other user gets 404.
   112 unit + integration green; mypy strict clean.
+- 2026-08-11: **Stage B — frontend (done).** `conversation.ts` (module-level active-id + a listener the
+  adapter fires on the `conversation` event), `history.ts` (authenticated `listConversations` /
+  `getConversationMessages`), `ConversationList.tsx` (sidebar: list + "new chat"). `runtime.ts` now sends
+  `conversation_id` and calls `notifyConversation` on the event. `App.tsx` restructured: a sidebar + a
+  `ChatPane` keyed so switching conversations remounts a fresh `useLocalRuntime(adapter, { initialMessages })`
+  seeded from the loaded messages; the listener highlights + refreshes the list without remounting mid-turn.
+  Browser QA caught a real bug — `/conversations` was missing from the Vite dev proxy (frontend got the SPA
+  HTML → JSON parse error); added it. Verified via Playwright: ask → conversation appears in the sidebar →
+  new chat → ask again (2 convos) → click the first → its messages reload. 0 console errors. Note: reload
+  restores the prose exchange (persisted role+content), not the ephemeral tool-step/table render.

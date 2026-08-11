@@ -22,6 +22,7 @@ function jsonResponse(data: unknown): Response {
 }
 
 const SSE_FRAMES = [
+  'event: conversation\ndata: {"id": "conv-1"}\n\n',
   'event: tool_start\ndata: {"name": "search_schema", "arguments": {"question": "q"}}\n\n',
   'event: tool_result\ndata: {"name": "search_schema", "preview": "table shipment(...)"}\n\n',
   'event: tool_start\ndata: {"name": "run_sql", "arguments": {"query": "SELECT 1"}}\n\n',
@@ -51,8 +52,12 @@ test("mounts without crashing and shows the login screen when unauthenticated", 
 test("authenticated: renders tool steps + result table + answer, and sends the Bearer token", async () => {
   localStorage.setItem("dyr_token", "tok-abc");
   const fetchMock = vi.fn((input: RequestInfo | URL, _init?: RequestInit) => {
-    if (String(input) === "/auth/me") {
+    const url = String(input);
+    if (url === "/auth/me") {
       return Promise.resolve(jsonResponse({ id: "u1", email: "a@b.com", name: "Ana" }));
+    }
+    if (url === "/conversations") {
+      return Promise.resolve(jsonResponse([]));
     }
     return Promise.resolve(sseResponse(SSE_FRAMES));
   });

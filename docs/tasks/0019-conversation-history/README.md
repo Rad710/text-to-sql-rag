@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 updated: 2026-08-11
 depends_on: [0016, 0017]
 ---
@@ -28,11 +28,11 @@ conversation's messages into the thread and threads the `conversation_id` on sub
 browser verification.
 
 ## Done when
-- [ ] `/chat` persists the user + assistant messages under the user's conversation and emits its id;
+- [x] `/chat` persists the user + assistant messages under the user's conversation and emits its id;
       `GET /conversations` and `GET /conversations/{id}` return the user's data (and 404 across users).
-- [ ] Integration tests (chat → persisted → listed → loaded) green; `ruff`/`mypy`/`pytest` green.
-- [ ] Thread-list UI: list, open a past conversation (messages reload), new chat; tests + browser-verified.
-- [ ] Committed.
+- [x] Integration tests (chat → persisted → listed → loaded) green; `ruff`/`mypy`/`pytest` green.
+- [x] Thread-list UI: list, open a past conversation (messages reload), new chat; tests + browser-verified.
+- [x] Committed.
 
 ---
 Log → [`discussion.md`](discussion.md)

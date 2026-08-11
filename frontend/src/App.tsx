@@ -1,11 +1,19 @@
-import { AssistantRuntimeProvider, ThreadPrimitive, useLocalRuntime } from "@assistant-ui/react";
-import { type FC, useEffect, useState } from "react";
+import {
+  AssistantRuntimeProvider,
+  type ThreadMessageLike,
+  ThreadPrimitive,
+  useLocalRuntime,
+} from "@assistant-ui/react";
+import { type FC, useCallback, useEffect, useState } from "react";
 
 import { Thread } from "@/components/assistant-ui/thread";
 import { OpenToolGroup, ToolRenderer } from "@/components/run-sql-tool";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 import { type AuthUser, clearToken, fetchMe } from "./auth";
+import { ConversationList } from "./ConversationList";
+import { onConversationStarted, setConversationId } from "./conversation";
+import { type ConversationSummary, getConversationMessages, listConversations } from "./history";
 import { LoginScreen } from "./LoginScreen";
 import { adapter } from "./runtime";
 
@@ -40,16 +48,69 @@ const Welcome: FC = () => (
   </div>
 );
 
+// A fresh local runtime seeded with a conversation's prior messages. Remounted (via `key`) when the
+// active conversation changes, so switching threads re-seeds the runtime (task 0019).
+const ChatPane: FC<{ initialMessages: ThreadMessageLike[] }> = ({ initialMessages }) => {
+  const runtime = useLocalRuntime(adapter, { initialMessages });
+  return (
+    <AssistantRuntimeProvider runtime={runtime}>
+      <Thread components={{ Welcome, ToolFallback: ToolRenderer, ToolGroup: OpenToolGroup }} />
+    </AssistantRuntimeProvider>
+  );
+};
+
 export default function App() {
-  const runtime = useLocalRuntime(adapter);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [initialMessages, setInitialMessages] = useState<ThreadMessageLike[]>([]);
+  const [paneKey, setPaneKey] = useState(0); // bumped only to remount ChatPane (switch/new)
+
+  const refreshList = useCallback(() => {
+    listConversations().then(setConversations);
+  }, []);
 
   useEffect(() => {
     fetchMe().then((u) => {
       setUser(u);
       setLoading(false);
     });
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    refreshList();
+    // When a turn (re)identifies its conversation, highlight it + refresh the list — no remount.
+    onConversationStarted((id) => {
+      setActiveId(id);
+      refreshList();
+    });
+    return () => onConversationStarted(null);
+  }, [user, refreshList]);
+
+  const startNew = useCallback(() => {
+    setConversationId(null);
+    setInitialMessages([]);
+    setActiveId(null);
+    setPaneKey((k) => k + 1);
+  }, []);
+
+  const openConversation = useCallback(async (id: string) => {
+    const messages = await getConversationMessages(id);
+    setConversationId(id);
+    setInitialMessages(messages.map((m) => ({ role: m.role, content: m.content })));
+    setActiveId(id);
+    setPaneKey((k) => k + 1);
+  }, []);
+
+  const logout = useCallback(() => {
+    clearToken();
+    setConversationId(null);
+    setConversations([]);
+    setActiveId(null);
+    setInitialMessages([]);
+    setUser(null);
   }, []);
 
   if (loading) {
@@ -64,35 +125,36 @@ export default function App() {
   }
 
   return (
-    <AssistantRuntimeProvider runtime={runtime}>
-      <TooltipProvider>
-        <div className="flex h-full flex-col">
-          <header className="border-border flex items-center justify-between gap-3 border-b px-6 py-3.5">
-            <div className="flex items-baseline gap-3">
-              <span className="font-semibold">🚚 DYR Transportes — Data Assistant</span>
-              <span className="text-muted-foreground text-xs">text-to-SQL · RAG · mock mode</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="text-muted-foreground text-xs">{user.name}</span>
-              <button
-                type="button"
-                onClick={() => {
-                  clearToken();
-                  setUser(null);
-                }}
-                className="text-muted-foreground hover:text-foreground text-xs underline underline-offset-2"
-              >
-                Salir
-              </button>
-            </div>
-          </header>
+    <TooltipProvider>
+      <div className="flex h-full flex-col">
+        <header className="border-border flex items-center justify-between gap-3 border-b px-6 py-3.5">
+          <div className="flex items-baseline gap-3">
+            <span className="font-semibold">🚚 DYR Transportes — Data Assistant</span>
+            <span className="text-muted-foreground text-xs">text-to-SQL · RAG · mock mode</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-muted-foreground text-xs">{user.name}</span>
+            <button
+              type="button"
+              onClick={logout}
+              className="text-muted-foreground hover:text-foreground text-xs underline underline-offset-2"
+            >
+              Salir
+            </button>
+          </div>
+        </header>
+        <div className="flex min-h-0 flex-1">
+          <ConversationList
+            conversations={conversations}
+            activeId={activeId}
+            onSelect={openConversation}
+            onNew={startNew}
+          />
           <div className="min-h-0 flex-1">
-            <Thread
-              components={{ Welcome, ToolFallback: ToolRenderer, ToolGroup: OpenToolGroup }}
-            />
+            <ChatPane key={paneKey} initialMessages={initialMessages} />
           </div>
         </div>
-      </TooltipProvider>
-    </AssistantRuntimeProvider>
+      </div>
+    </TooltipProvider>
   );
 }
