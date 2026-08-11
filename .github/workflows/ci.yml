@@ -28,8 +28,8 @@ jobs:
       - name: Type check (mypy)
         run: uv run mypy app evaluation
 
-      - name: Test (pytest)
-        run: uv run pytest
+      - name: Test (pytest + coverage)
+        run: uv run pytest --cov=app --cov=evaluation --cov-report=term-missing
 
   frontend:
     runs-on: ubuntu-latest

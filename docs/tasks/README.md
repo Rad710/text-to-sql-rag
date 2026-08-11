@@ -33,7 +33,7 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 | [0010](0010-react-frontend/) | **Vite + React + TypeScript frontend** (assistant-ui) — styled `Thread` + **tool-call step rendering** + structured result table (decisions 0005/0006), regression tests + CI, browser-verified. Chainlit-parity scope now decided → decomposed into 0016/0018/0019/0020 | done | 0009 |
 | 0011 | **Stretch:** standalone read-only SQL MCP server (schema-search + `run_sql` tools) over the synthetic DB | proposed | 0004, 0006 |
 | [0012](0012-eval-harness/) | **Evaluation harness** — a golden `(question → gold SQL)` set + an execution-accuracy runner (compare result sets, not string match) wired into CI; plus `docs/failure-modes.md` | done | 0008 |
-| 0013 | Dev-experience polish — `.pre-commit-config.yaml` (ruff + ruff-format + mypy) + coverage reporting (`pytest-cov`) in CI | proposed | 0001 |
+| [0013](0013-devex-precommit-coverage/) | Dev-experience polish — `.pre-commit-config.yaml` (ruff + ruff-format + mypy) + coverage reporting (`pytest-cov`) in CI | done | 0001 |
 | [0015](0015-real-llm-config/) | **Real-LLM config** — point the OpenAI-compatible client at a local **Ollama/vLLM** endpoint (base URL / model / optional key) via env; mock stays the default; verify + document | done | 0007, 0009 |
 | [0016](0016-multi-turn/) | **Multi-turn conversation** — thread conversation history through `/chat` + the agent loop + the frontend adapter (follow-ups get context) | done | 0009, 0010 |
 | [0017](0017-app-persistence-foundation/) | **App persistence foundation** — a separate **Postgres** service + SQLAlchemy (async) + Alembic; schema for `users` / `conversations` / `messages` / `feedback` ([decision 0008](../decisions/0008-app-datastore-postgres.md)) | done | 0001 |
@@ -102,6 +102,10 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 - [0020](0020-feedback/) — **feedback 👍/👎**: `POST /feedback` (owner-checked upsert, one per message);
   `/chat` emits the assistant message id + `GET /conversations/{id}` carries ids; thumbs in the action bar
   (idiomatic assistant-ui `FeedbackAdapter`) POST it. Integration + browser-verified (row in Postgres).
+- [0013](0013-devex-precommit-coverage/) — **dev-experience polish**: `.pre-commit-config.yaml`
+  (ruff-check --fix + ruff-format pinned to our ruff, a local `uv run mypy` hook, basic hygiene hooks) so
+  the CI gates run locally pre-commit; `pytest-cov` wired into the CI quality job with a `fail_under = 80`
+  floor (unit coverage ~87%). README documents `pre-commit install`. Tooling only.
 - [0022](0022-rate-limiting-deploy-modes/) — **rate limiting + deploy modes**: a pure in-memory
   `RateLimiter` (`app/ratelimit.py`, per-minute rate + optional per-day cap) enforced **per user** on
   `/chat` (429 + Retry-After); a `DEPLOY_MODE=demo|live` knob sets the defaults (demo 60/min; live 20/min

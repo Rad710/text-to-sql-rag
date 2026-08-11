@@ -1,0 +1,31 @@
+# Local pre-commit gates — the same checks CI runs, moved left so drift is caught before a push.
+# Install once:  uv run pre-commit install     Run on demand:  uv run pre-commit run --all-files
+# Hook versions are pinned; ruff-pre-commit is pinned to the same ruff as the dev group.
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.2
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format
+
+  # mypy needs the project's own dependencies to resolve imports, so run it through uv in the
+  # project env rather than pre-commit's isolated virtualenv. Scoped to the typed packages CI checks.
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy (app, evaluation)
+        entry: uv run mypy app evaluation
+        language: system
+        types: [python]
+        pass_filenames: false

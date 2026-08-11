@@ -90,6 +90,16 @@ This repo is built with a disciplined, auditable AI-assisted workflow — number
 immutable decision log, and per-task commits. See [`docs/ai-workflow.md`](docs/ai-workflow.md) and start
 at [`docs/README.md`](docs/README.md).
 
+**Pre-commit hooks** run the same gates as CI (ruff, ruff-format, mypy + basic hygiene) before each
+commit. Enable them once after `uv sync`:
+
+```bash
+uv run pre-commit install          # then hooks run automatically on git commit
+uv run pre-commit run --all-files  # run them on demand across the repo
+```
+
+CI's quality job also reports test coverage (`pytest --cov`) and fails under an 80% floor.
+
 ## License
 
 MIT — see [`LICENSE`](LICENSE) (added in task 0001).
