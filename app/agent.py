@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from app.config import Settings, get_settings
+from app.engine import RagStore
 from app.execution import RunResult, format_result
 from app.execution import run_sql as execute_sql
 from app.llm import ZERO_USAGE, LlmProvider, LlmResponse, Usage, get_llm
@@ -165,7 +166,7 @@ def build_tools(store: Any, schema: SchemaInfo, settings: Settings) -> AgentTool
 def ask(
     question: str,
     *,
-    store: Any,
+    store: RagStore,
     schema: SchemaInfo,
     settings: Settings | None = None,
     llm: LlmProvider | None = None,
@@ -180,7 +181,7 @@ def ask(
 def stream(
     question: str,
     *,
-    store: Any,
+    store: RagStore,
     schema: SchemaInfo,
     settings: Settings | None = None,
     llm: LlmProvider | None = None,

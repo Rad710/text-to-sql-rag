@@ -13,6 +13,7 @@ from typing import Any
 
 from app.agent import ask
 from app.config import Settings, get_settings
+from app.engine import RagStore
 from app.execution import run_sql
 from app.llm import LlmProvider
 from app.schema import SchemaInfo
@@ -54,7 +55,7 @@ def _normalize(rows: list[tuple[Any, ...]]) -> RowMultiset:
 def run_eval(
     cases: tuple[EvalCase, ...],
     *,
-    store: Any,
+    store: RagStore,
     schema: SchemaInfo,
     settings: Settings | None = None,
     llm: LlmProvider | None = None,

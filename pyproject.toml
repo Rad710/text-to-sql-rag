@@ -44,6 +44,7 @@ extend-immutable-calls = ["fastapi.Depends"]
 
 [tool.mypy]
 python_version = "3.12"
+strict = true
 warn_unused_configs = true
 warn_redundant_casts = true
 warn_unused_ignores = true
