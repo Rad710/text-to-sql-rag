@@ -30,6 +30,10 @@ class RunResult:
     def row_count(self) -> int:
         return len(self.rows)
 
+    def as_cells(self, max_rows: int = 100) -> list[list[str]]:
+        """Rows as JSON-safe string cells — the structured payload the frontend renders."""
+        return [["NULL" if v is None else str(v) for v in row] for row in self.rows[:max_rows]]
+
 
 def run_sql(query: str, settings: Settings | None = None) -> RunResult:
     """Validate, bound, and execute ``query`` read-only; return rows or a structured error."""
@@ -75,14 +79,21 @@ def run_sql(query: str, settings: Settings | None = None) -> RunResult:
 
 
 def format_result(result: RunResult, max_rows: int = 50) -> str:
-    """Render a :class:`RunResult` as compact text for a tool message the model reads."""
+    """Serialize a :class:`RunResult` as a compact Markdown table for the **model** to read.
+
+    This is the model-facing tool-message text only; the UI renders the table from the structured
+    rows on the SSE ``tool_result`` event (decision 0006), not from this string.
+    """
     if result.error:
         return f"ERROR: {result.error}"
     if not result.rows:
         return "(0 rows)"
-    header = " | ".join(result.columns)
-    lines = [header, "-" * len(header)]
-    for row in result.rows[:max_rows]:
-        lines.append(" | ".join("NULL" if v is None else str(v) for v in row))
+
+    def esc(cell: str) -> str:  # a pipe in a value would break the Markdown row
+        return cell.replace("|", "\\|")
+
+    header = "| " + " | ".join(esc(c) for c in result.columns) + " |"
+    separator = "| " + " | ".join("---" for _ in result.columns) + " |"
+    body = ["| " + " | ".join(esc(c) for c in row) + " |" for row in result.as_cells(max_rows)]
     note = f"({result.row_count} rows{', truncated' if result.truncated else ''})"
-    return "\n".join(lines) + "\n" + note
+    return "\n".join([header, separator, *body]) + "\n\n" + note

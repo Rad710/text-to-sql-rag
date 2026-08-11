@@ -127,6 +127,11 @@ def test_stream_emits_ordered_events() -> None:
     ]
     run_starts = [e for e in events if e.type == "tool_start" and e.data["name"] == "run_sql"]
     assert run_starts[0].data["arguments"]["query"] == "SELECT 1"  # SQL streamed to the UI
+    # run_sql carries structured rows for the frontend to render as a table (decision 0006).
+    run_result = next(e for e in events if e.type == "tool_result" and e.data["name"] == "run_sql")
+    assert run_result.data["columns"] == ["n"]
+    assert run_result.data["rows"] == [["1"]]
+    assert run_result.data["row_count"] == 1
     usage = next(e for e in events if e.type == "usage")
     assert usage.data["iterations"] == 3 and usage.data["total_tokens"] > 0
 

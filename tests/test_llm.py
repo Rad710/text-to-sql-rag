@@ -74,7 +74,9 @@ def test_third_turn_returns_final_answer() -> None:
     ]
     r = mock.complete(messages, TOOLS)
     assert r.tool_calls == []
-    assert r.content is not None and "100" in r.content
+    # After both tools ran, the mock returns a final prose answer (the result table is rendered
+    # by the frontend from the structured tool_result, not echoed here — decision 0006).
+    assert r.content is not None and "queried the database" in r.content
 
 
 def test_general_question_answered_directly() -> None:
@@ -186,5 +188,5 @@ def test_answer_language_matches_question() -> None:
 
     es = mock.complete(convo("facturación total por ruta"), TOOLS).content
     en = mock.complete(convo("total freight revenue per route"), TOOLS).content
-    assert es is not None and es.startswith("Según")
-    assert en is not None and en.startswith("Based on")
+    assert es is not None and es.startswith("Consulté")
+    assert en is not None and en.startswith("I queried")

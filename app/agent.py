@@ -80,10 +80,15 @@ def stream_answer(
         messages.append(_assistant_message(response))
         for call in response.tool_calls:
             yield AgentEvent("tool_start", {"name": call.name, "arguments": call.arguments})
-            content = _run_tool(call.name, call.arguments, tools, question)
+            content, structured = _run_tool(call.name, call.arguments, tools, question)
             yield AgentEvent(
                 "tool_result",
-                {"name": call.name, "arguments": call.arguments, "preview": content[:200]},
+                {
+                    "name": call.name,
+                    "arguments": call.arguments,
+                    "preview": content[:200],
+                    **structured,
+                },
             )
             messages.append({"role": "tool", "tool_call_id": call.id, "content": content})
 
@@ -132,12 +137,28 @@ def answer_question(
     return AgentResult(answer=answer, sql=sql, trace=trace, usage=usage, iterations=iterations)
 
 
-def _run_tool(name: str, arguments: dict[str, Any], tools: AgentTools, question: str) -> str:
+def _run_tool(
+    name: str, arguments: dict[str, Any], tools: AgentTools, question: str
+) -> tuple[str, dict[str, Any]]:
+    """Run a tool. Returns (model-facing text, structured payload for the SSE event).
+
+    The text is what the LLM reads; the structured payload (run_sql rows) is what the frontend
+    renders as a table (decision 0006).
+    """
     if name == "search_schema":
-        return tools.search_schema(str(arguments.get("question") or question))
+        return tools.search_schema(str(arguments.get("question") or question)), {}
     if name == "run_sql":
-        return format_result(tools.run_sql(str(arguments.get("query") or "")))
-    return f"ERROR: unknown tool '{name}'"
+        result = tools.run_sql(str(arguments.get("query") or ""))
+        if result.error:
+            return format_result(result), {}
+        structured = {
+            "columns": result.columns,
+            "rows": result.as_cells(),
+            "row_count": result.row_count,
+            "truncated": result.truncated,
+        }
+        return format_result(result), structured
+    return f"ERROR: unknown tool '{name}'", {}
 
 
 def _assistant_message(response: LlmResponse) -> dict[str, Any]:

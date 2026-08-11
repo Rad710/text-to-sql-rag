@@ -35,9 +35,11 @@ _EN_WORD_TEXT = (
 _ES_WORDS = frozenset(_ES_WORD_TEXT.split())
 _EN_WORDS = frozenset(_EN_WORD_TEXT.split())
 
-_ANSWER_PREAMBLE = {
-    "es": "Según la base de datos, estos son los resultados:",
-    "en": "Based on the database, here are the results:",
+# Prose only — the result table is rendered by the frontend from the structured tool_result
+# (decision 0006), so the mock answer no longer embeds it.
+_ANSWER_PROSE = {
+    "es": "Consulté la base de datos y ejecuté la consulta SQL para responder tu pregunta.",
+    "en": "I queried the database and ran the SQL to answer your question.",
 }
 _GENERAL_ANSWER = {"es": GENERAL_ANSWER_ES, "en": GENERAL_ANSWER_EN}
 
@@ -141,8 +143,7 @@ class MockProvider:
             content = None
             tool_calls = [ToolCall("call_run", "run_sql", {"query": sql})]
         else:
-            result = _last_tool_result(messages)
-            content = f"{_ANSWER_PREAMBLE[lang]}\n\n{result}"
+            content = _ANSWER_PROSE[lang]
 
         prompt_tokens = max(1, sum(len(str(m.get("content") or "")) for m in messages) // 4)
         completion_tokens = (len(content) // 4 if content else 0) + (20 if tool_calls else 0)
@@ -222,10 +223,3 @@ def _tool_calls_made(messages: list[dict[str, Any]]) -> set[str]:
                 if name:
                     made.add(name)
     return made
-
-
-def _last_tool_result(messages: list[dict[str, Any]]) -> str:
-    for message in reversed(messages):
-        if message.get("role") == "tool":
-            return str(message.get("content") or "")
-    return ""
