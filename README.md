@@ -32,10 +32,27 @@ Runs with **no API key** via a built-in mock provider.
 ## Quickstart
 
 ```bash
-# (after task 0001 lands) run with the mock LLM — no key required
-uvicorn app.main:app --reload
-# open http://localhost:8000
+# run with the built-in mock LLM — no API key, no model server required
+uv run uvicorn app.api:app --reload
+# frontend: cd frontend && pnpm install && pnpm dev
 ```
+
+### Using a real model (Ollama / vLLM)
+
+The LLM client is **OpenAI-compatible**, so it can target any local model server. Point it there via env
+(the deterministic mock stays the default when `LLM_MODE` is unset):
+
+```bash
+# Ollama:  `ollama serve` + `ollama pull llama3.1`
+LLM_MODE=openai LLM_BASE_URL=http://localhost:11434/v1 LLM_MODEL=llama3.1 LLM_API_KEY=ollama \
+  uv run uvicorn app.api:app --reload
+
+# vLLM (OpenAI-compatible server, default port 8000):
+LLM_MODE=openai LLM_BASE_URL=http://localhost:8000/v1 LLM_MODEL=<served-model> \
+  uv run uvicorn app.api:app --reload
+```
+
+`LLM_API_KEY` is optional for Ollama (any placeholder works); set it if your server requires one.
 
 ## SQL safety
 

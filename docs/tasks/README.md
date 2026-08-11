@@ -34,7 +34,7 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 | 0011 | **Stretch:** standalone read-only SQL MCP server (schema-search + `run_sql` tools) over the synthetic DB | proposed | 0004, 0006 |
 | [0012](0012-eval-harness/) | **Evaluation harness** — a golden `(question → gold SQL)` set + an execution-accuracy runner (compare result sets, not string match) wired into CI; plus `docs/failure-modes.md` | done | 0008 |
 | 0013 | Dev-experience polish — `.pre-commit-config.yaml` (ruff + ruff-format + mypy) + coverage reporting (`pytest-cov`) in CI | proposed | 0001 |
-| [0015](0015-real-llm-config/) | **Real-LLM config** — point the OpenAI-compatible client at a local **Ollama/vLLM** endpoint (base URL / model / optional key) via env; mock stays the default; verify end-to-end + document | in-progress | 0007, 0009 |
+| [0015](0015-real-llm-config/) | **Real-LLM config** — point the OpenAI-compatible client at a local **Ollama/vLLM** endpoint (base URL / model / optional key) via env; mock stays the default; verify + document | done | 0007, 0009 |
 | 0016 | **Multi-turn conversation** — thread conversation history through `/chat` + the agent loop + the frontend adapter (follow-ups get context) | proposed | 0009, 0010 |
 | 0017 | **App persistence foundation** — a separate **Postgres** service + SQLAlchemy (async) + Alembic; schema for `users` / `conversations` / `messages` / `feedback` ([decision 0008](../decisions/0008-app-datastore-postgres.md)) | proposed | 0001 |
 | 0018 | **Auth (JWT)** — register/login, bcrypt password hashing, signed JWT, protected `/chat`, React login UI ([decision 0009](../decisions/0009-auth-jwt.md)) | proposed | 0017, 0010 |

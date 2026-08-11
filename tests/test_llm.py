@@ -147,9 +147,10 @@ def test_openai_provider_parses_tool_calls_and_cost() -> None:
     assert resp.tool_calls[0].arguments == {"query": "SELECT 1"}
     assert resp.usage.prompt_tokens == 100 and resp.usage.completion_tokens == 50
     assert resp.usage.cost_usd == 100 / 1_000_000 * 1.0 + 50 / 1_000_000 * 2.0
-    # tools were passed through to the API call
+    # tools + the configured model were passed through to the API call
     assert fake.captured["tools"] == TOOLS
     assert fake.captured["tool_choice"] == "auto"
+    assert fake.captured["model"] == "gpt-4o-mini"
 
 
 def test_openai_provider_parses_plain_content() -> None:
@@ -158,6 +159,24 @@ def test_openai_provider_parses_plain_content() -> None:
     resp = provider.complete([{"role": "user", "content": "x"}], None)
     assert resp.content == "hello"
     assert resp.tool_calls == []
+
+
+def test_openai_client_points_at_configured_endpoint() -> None:
+    """Built with the configured base_url/api_key — so it can target a local Ollama or vLLM
+    server (task 0015), not just api.openai.com."""
+    from unittest.mock import patch
+
+    import openai
+
+    settings = Settings(
+        llm_mode="openai",
+        llm_base_url="http://localhost:11434/v1",  # e.g. Ollama
+        llm_api_key="ollama",
+    )
+    provider = OpenAIProvider(settings)
+    with patch.object(openai, "OpenAI") as make_client:
+        provider._get_client()
+    make_client.assert_called_once_with(base_url="http://localhost:11434/v1", api_key="ollama")
 
 
 def test_tool_schemas_shape() -> None:
