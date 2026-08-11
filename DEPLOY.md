@@ -27,31 +27,22 @@ first `/chat`.
 
 ## 1. Configure secrets
 
-The prod compose requires a few secrets via a local **`.env`** (gitignored — never commit real values).
-Create `.env` next to `docker-compose.prod.yml`:
+All configuration is a single **`.env`** (gitignored — never commit real values). Copy the committed
+template and fill in the secrets:
 
-```dotenv
-# Deploy flavor: demo = mock LLM (safe/free public demo); live = real LLM + strict limits (decision 0010)
-DEPLOY_MODE=demo
-LLM_MODE=mock
-
-# JWT signing secret — MUST be >=32 bytes, unique per deploy. Generate one:
-#   python -c "import secrets; print(secrets.token_urlsafe(48))"
-JWT_SECRET=replace-with-a-long-random-secret
-
-# MySQL (synthetic query DB): root bootstraps the container; llm_readonly is the app's read-only user
-MYSQL_ROOT_PASSWORD=replace-mysql-root
-DB_USER=llm_readonly
-DB_PASSWORD=replace-readonly
-
-# Postgres (app store) password for the `app` user
-APP_DB_PASSWORD=replace-postgres
-
-# --- live mode only (DEPLOY_MODE=live): point at a real OpenAI-compatible server ---
-# LLM_BASE_URL=http://your-ollama-or-vllm:11434/v1
-# LLM_MODEL=llama3.1
-# LLM_API_KEY=ollama
+```bash
+cp .env.example .env
 ```
+
+Then edit `.env` and set at least these (see the comments in the file for the rest):
+
+- `JWT_SECRET` — a unique **≥32-byte** value: `python -c "import secrets; print(secrets.token_urlsafe(48))"`
+- `MYSQL_ROOT_PASSWORD`, `DB_PASSWORD` — the MySQL admin + read-only-user passwords
+- `APP_DB_PASSWORD` — the Postgres `app` user password (keep it in sync with `APP_DATABASE_URL`)
+- keep `DEPLOY_MODE=demo` + `LLM_MODE=mock` for the mock demo; set `WEB_PORT=8080` if port 80 is taken
+
+For a **live** (real-LLM) deploy, also set `DEPLOY_MODE=live`, `LLM_MODE=openai`, and `LLM_BASE_URL` /
+`LLM_MODEL` / `LLM_API_KEY` at an OpenAI-compatible server (see §5).
 
 ## 2. Bring it up
 

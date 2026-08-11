@@ -44,6 +44,7 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 | [0022](0022-rate-limiting-deploy-modes/) | **Rate limiting + deploy modes** — per-**user** limit on `/chat` + `DEPLOY_MODE` config for the two flavors (demo · live) ([decision 0010](../decisions/0010-rate-limiting-deploy-modes.md)) | done | 0009, 0015 |
 | [0014](0014-deploy-live/) | **Deploy live** (the showcase must be clickable) — production docker-compose (nginx SPA+proxy + API + MySQL + Postgres), `DEPLOY.md` runbook, README Deploy section. Artifacts built + locally verified; owner does the VM/DNS/TLS + hosted URL | done | 0010, 0018, 0022 |
 | [0023](0023-e2e-test-hardening/) | **Thorough test pass + Playwright e2e + hardening** — full manual pass, register input-validation fix (422 + UI message), a browser e2e suite wired into CI | done | 0014 |
+| [0024](0024-env-file-config/) | **Single `.env` as source of truth** — complete `.env.example`; README + DEPLOY use `.env` instead of inline env on the command line | done | 0014, 0022 |
 
 ## Backlog — open, unscheduled
 
@@ -103,6 +104,11 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 - [0020](0020-feedback/) — **feedback 👍/👎**: `POST /feedback` (owner-checked upsert, one per message);
   `/chat` emits the assistant message id + `GET /conversations/{id}` carries ids; thumbs in the action bar
   (idiomatic assistant-ui `FeedbackAdapter`) POST it. Integration + browser-verified (row in Postgres).
+- [0024](0024-env-file-config/) — **single `.env` source of truth**: completed the stale `.env.example`
+  (all config vars + compose secrets, sectioned/commented) and rewrote README + DEPLOY so every command
+  reads `.env` (`cp .env.example .env` + edit) instead of inline `VAR=… uv run …`. No code change
+  (`config.py` already loads `.env`); verified both compose files resolve and the full host-run flow
+  (alembic → API → register → /chat) works from `.env` alone.
 - [0023](0023-e2e-test-hardening/) — **e2e + test hardening**: a thorough exploratory pass (API sweep +
   browser) confirmed the backend solid (auth, cross-user isolation → 404, feedback upsert, multi-turn,
   history reload); fixed the two gaps it found — register now rejects an invalid email + a <8-char

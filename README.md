@@ -31,28 +31,46 @@ Runs with **no API key** via a built-in mock provider.
 
 ## Quickstart
 
+All configuration lives in a single **`.env`** (read by both the app and docker compose). Copy the
+template and set the `change-me` secrets — the mock LLM needs no API key:
+
 ```bash
-# run with the built-in mock LLM — no API key, no model server required
-uv run uvicorn app.api:app --reload
-# frontend: cd frontend && pnpm install && pnpm dev
+cp .env.example .env      # then edit the change-me* values (see the comments in the file)
 ```
+
+**Run the whole app in Docker** — nginx + API + MySQL + Postgres behind one URL, migrations on boot:
+
+```bash
+docker compose -f docker-compose.prod.yml up -d --build
+# → http://localhost   (set WEB_PORT=8080 in .env if port 80 is taken)
+```
+
+### Local development (hot reload)
+
+Run the databases in Docker and the API + frontend as dev servers — all reading the same `.env`:
+
+```bash
+docker compose up -d mysql postgres      # query DB (:3306) + app store (:5432)
+uv run alembic upgrade head              # create the app-store schema
+uv run uvicorn app.api:app --reload      # API on :8000 (mock LLM by default)
+cd frontend && pnpm install && pnpm dev  # UI on :5173 (proxies to the API)
+```
+
+Open **http://localhost:5173**.
 
 ### Using a real model (Ollama / vLLM)
 
-The LLM client is **OpenAI-compatible**, so it can target any local model server. Point it there via env
-(the deterministic mock stays the default when `LLM_MODE` is unset):
+The LLM client is **OpenAI-compatible**, so it can target any local model server — just set these in
+`.env` (the deterministic mock stays the default when `LLM_MODE=mock`):
 
-```bash
-# Ollama:  `ollama serve` + `ollama pull llama3.1`
-LLM_MODE=openai LLM_BASE_URL=http://localhost:11434/v1 LLM_MODEL=llama3.1 LLM_API_KEY=ollama \
-  uv run uvicorn app.api:app --reload
-
-# vLLM (OpenAI-compatible server, default port 8000):
-LLM_MODE=openai LLM_BASE_URL=http://localhost:8000/v1 LLM_MODEL=<served-model> \
-  uv run uvicorn app.api:app --reload
+```dotenv
+LLM_MODE=openai
+LLM_BASE_URL=http://localhost:11434/v1   # Ollama; vLLM is usually http://localhost:8000/v1
+LLM_MODEL=llama3.1
+LLM_API_KEY=ollama                       # any placeholder for Ollama; a real key for a cloud endpoint
 ```
 
-`LLM_API_KEY` is optional for Ollama (any placeholder works); set it if your server requires one.
+then start the API as above. `LLM_API_KEY` is optional for Ollama; set it if your server requires one.
 
 ## Deploy modes
 
@@ -64,13 +82,16 @@ which sets sane **per-user** `/chat` rate-limit defaults; the mock LLM stays the
 | `demo` (default) | mock | 60/min, no daily cap | safe to leave open — deterministic, no cost |
 | `live` | real (Ollama/vLLM) | 20/min **and** 100/day | real-LLM deploy; the daily cap bounds per-account cost |
 
-```bash
-# demo (default): nothing to set
-uv run uvicorn app.api:app
+Set the flavor in `.env` (`demo` is the default). For `live`, also point `LLM_*` at a real model and use
+a real `JWT_SECRET`:
 
-# live: real LLM + stricter limits (set LLM_* per the section above)
-DEPLOY_MODE=live LLM_MODE=openai LLM_BASE_URL=... LLM_MODEL=... \
-  JWT_SECRET=<a-real-32B+-secret> uv run uvicorn app.api:app
+```dotenv
+# .env
+DEPLOY_MODE=live
+LLM_MODE=openai
+LLM_BASE_URL=http://localhost:11434/v1
+LLM_MODEL=llama3.1
+JWT_SECRET=<generate one: python -c "import secrets; print(secrets.token_urlsafe(48))">
 ```
 
 The defaults are overridable: `RATE_LIMIT_PER_MIN` and `RATE_LIMIT_PER_DAY` (`0` = no daily cap). The
@@ -118,7 +139,7 @@ the API — one origin, no CORS): FastAPI (mock mode + Alembic migrations on boo
 query DB, and the Postgres app store.
 
 ```bash
-# create a .env with secrets (template in DEPLOY.md), then:
+cp .env.example .env   # set the change-me secrets (a real JWT_SECRET), then:
 docker compose -f docker-compose.prod.yml up -d --build
 # → the app is served on http://localhost (nginx); API is internal-only
 ```
