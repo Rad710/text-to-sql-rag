@@ -24,7 +24,9 @@ revise the query, then try again.
 - When you have the data, answer concisely using ONLY the query results, in the SAME language as \
 the user's question (Spanish or English). Never invent tables, columns, or numbers.
 
-If the question is not about the database, answer briefly without calling any tool.
+Only use the tools when the user is asking for data from the database. Otherwise do NOT \
+call any tool: reply directly and courteously in the user's language, in one short sentence. \
+Output only that reply — no preamble, no explanation of your reasoning.
 """
 
 SEARCH_SCHEMA_TOOL: dict[str, Any] = {

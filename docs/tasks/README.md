@@ -57,6 +57,7 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 | [0034](0034-mock-db-flyway/) | **`mock-db/` + Flyway** — rename `db/` → `mock-db/`; replace the init-SQL + shell grant with Flyway versioned migrations (`V1/V2/V3`) run as a one-shot compose service + in CI ([decision 0011](../decisions/0011-flyway-mock-db-migrations.md), supersedes 0004) | done | — |
 | [0035](0035-backend-consolidation/) | **`backend/` consolidation** — move all Python (`app`, `tests`, `evaluation`, `alembic`, `pyproject`, `uv.lock`) under `backend/` mirroring `frontend/`; rename `Dockerfile`→`backend.Dockerfile`; repoint CI/docker/docs. Behavior unchanged | done | 0033, 0034 |
 | [0036](0036-run-sql-arg-alias/) | **`run_sql` arg alias** — accept `sql` as an alias for the `query` argument so local models (llama3.1) that misname it aren't rejected as "empty SQL"; frontend renders bare SQL either way | done | — |
+| [0037](0037-chitchat-prompt/) | **Chit-chat prompt cleanup** — reword the non-DB system-prompt rule to a single general instruction (no enumerated greetings). Reduces but can't fully stop `llama3.1:8b` from narrating its reasoning — a model limit, not wording | done | — |
 
 ## Backlog — open, unscheduled
 
@@ -67,6 +68,14 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 
 ## Done
 
+- [0037](0037-chitchat-prompt/) — **chit-chat prompt cleanup**: in live mode (`llama3.1:8b`) greetings got
+  rambling nonsense that leaked the model's reasoning ("No schema or SQL call necessary…"). Reworded the
+  non-DB rule to a single **general** instruction (owner's call — no enumerated greeting strings): use the
+  tools only when the user asks for data, otherwise answer directly with no preamble. Honest outcome: the
+  rule is right, but across four phrasings tested live the leak persisted non-deterministically on this 8B
+  model — confirmed model-dependent by a quick search, not a wording fix. Kept the clean general prompt;
+  the real fix for live chit-chat quality is a stronger model (mock stays the deterministic demo default).
+  Same class of limit as `llama3.1:8b` garbling harder data questions (tool calls emitted as text).
 - [0036](0036-run-sql-arg-alias/) — **`run_sql` arg alias**: live-mode testing with local `llama3.1:8b`
   showed ~half of data questions returning confidently-wrong answers — the model named the `run_sql`
   argument `sql` instead of the schema's `query`, so the backend read an empty string and the validator
