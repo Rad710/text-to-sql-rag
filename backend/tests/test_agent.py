@@ -64,6 +64,23 @@ def test_happy_path() -> None:
     assert result.usage.total_tokens > 0
 
 
+def test_run_sql_accepts_sql_arg_alias() -> None:
+    # Smaller local models (e.g. llama3.1) name the run_sql argument `sql` instead of the schema's
+    # `query`. The loop must accept either, else a valid query is dropped as "empty SQL".
+    seen: list[str] = []
+
+    def run_sql(query: str) -> RunResult:
+        seen.append(query)
+        return RunResult(sql=query, columns=["n"], rows=[(1,)])
+
+    responses = [_call("run_sql", {"sql": "SELECT 1"}), _answer("listo")]
+    result = answer_question("q", StubLLM(responses), _tools(run_sql), 6)
+
+    assert seen == ["SELECT 1"]  # the SQL reached the tool, not an empty string
+    assert result.sql == ["SELECT 1"]
+    assert result.answer == "listo"
+
+
 def test_self_correction_after_sql_error() -> None:
     responses = [
         _call("search_schema", {"question": "q"}),

@@ -138,7 +138,7 @@ def answer_question(
             name, arguments = event.data["name"], event.data["arguments"]
             trace.append(ToolInvocation(name, arguments, event.data["preview"]))
             if name == "run_sql":
-                sql.append(str(arguments.get("query") or ""))
+                sql.append(_sql_arg(arguments))
         elif event.type == "answer":
             answer = event.data["text"]
         elif event.type == "usage":
@@ -148,6 +148,16 @@ def answer_question(
             iterations = event.data["iterations"]
 
     return AgentResult(answer=answer, sql=sql, trace=trace, usage=usage, iterations=iterations)
+
+
+def _sql_arg(arguments: dict[str, Any]) -> str:
+    """Extract the SQL from a ``run_sql`` tool call.
+
+    The tool schema names the parameter ``query``, but smaller local models (e.g. ``llama3.1``)
+    often emit ``sql`` instead. Accept either so a well-formed query isn't dropped as "empty SQL".
+    The sqlglot validator + read-only DB user still enforce read-only whichever key the model used.
+    """
+    return str(arguments.get("query") or arguments.get("sql") or "")
 
 
 def _run_tool(
@@ -161,7 +171,7 @@ def _run_tool(
     if name == "search_schema":
         return tools.search_schema(str(arguments.get("question") or question)), {}
     if name == "run_sql":
-        result = tools.run_sql(str(arguments.get("query") or ""))
+        result = tools.run_sql(_sql_arg(arguments))
         if result.error:
             return format_result(result), {}
         structured = {

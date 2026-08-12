@@ -56,6 +56,7 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 | [0033](0033-config-package/) | **`app/config/` package** — group `config.py` + `ratelimit.py` into a sub-package with a re-exporting `__init__`; imports unchanged. First step of the repo reorg (plan 0033–0035) | done | — |
 | [0034](0034-mock-db-flyway/) | **`mock-db/` + Flyway** — rename `db/` → `mock-db/`; replace the init-SQL + shell grant with Flyway versioned migrations (`V1/V2/V3`) run as a one-shot compose service + in CI ([decision 0011](../decisions/0011-flyway-mock-db-migrations.md), supersedes 0004) | done | — |
 | [0035](0035-backend-consolidation/) | **`backend/` consolidation** — move all Python (`app`, `tests`, `evaluation`, `alembic`, `pyproject`, `uv.lock`) under `backend/` mirroring `frontend/`; rename `Dockerfile`→`backend.Dockerfile`; repoint CI/docker/docs. Behavior unchanged | done | 0033, 0034 |
+| [0036](0036-run-sql-arg-alias/) | **`run_sql` arg alias** — accept `sql` as an alias for the `query` argument so local models (llama3.1) that misname it aren't rejected as "empty SQL"; frontend renders bare SQL either way | done | — |
 
 ## Backlog — open, unscheduled
 
@@ -66,6 +67,14 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 
 ## Done
 
+- [0036](0036-run-sql-arg-alias/) — **`run_sql` arg alias**: live-mode testing with local `llama3.1:8b`
+  showed ~half of data questions returning confidently-wrong answers — the model named the `run_sql`
+  argument `sql` instead of the schema's `query`, so the backend read an empty string and the validator
+  rejected `"empty SQL"`, after which the model hallucinated "no data". Now the agent accepts `query` **or**
+  `sql` (`app/agent.py` `_sql_arg`), and the frontend renders bare SQL for either name (`lib/runtime.ts`).
+  Safe — the sqlglot validator + read-only user still enforce read-only. New unit test; verified live: the
+  previously-failing driver query now returns the correct table + answer, plus JOINs and general chit-chat
+  all behave, 0 console errors.
 - [0035](0035-backend-consolidation/) — **`backend/` consolidation**: moved all Python (`app/`, `tests/`,
   `evaluation/`, `alembic/` + `alembic.ini`, `pyproject.toml`, `uv.lock`, `.python-version`) under a new
   `backend/` dir mirroring `frontend/` (the full-stack-fastapi-template layout); package stays `app/` and

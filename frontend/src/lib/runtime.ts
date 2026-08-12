@@ -135,8 +135,11 @@ export const adapter: ChatModelAdapter = {
                     toolName: name,
                     args: args as ToolCallMessagePart["args"],
                     // Show the meaningful argument as plain text in the collapsible step — the SQL for
-                    // run_sql, the question for search_schema — instead of raw JSON.
-                    argsText: String(args.query ?? args.question ?? JSON.stringify(args)),
+                    // run_sql (models name it `query` or, for some local ones, `sql`), the question for
+                    // search_schema — instead of raw JSON.
+                    argsText: String(
+                        args.query ?? args.sql ?? args.question ?? JSON.stringify(args),
+                    ),
                 });
                 pending = tools.length - 1;
             } else if (evt.type === "tool_result") {
