@@ -12,6 +12,7 @@ import os
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import Literal
+from urllib.parse import quote
 
 from dotenv import load_dotenv
 
@@ -52,15 +53,19 @@ class Settings:
     llm_price_input_per_1m: float = 0.0
     llm_price_output_per_1m: float = 0.0
 
-    # Query-target database (synthetic DYR Transportes; wired in task 0002).
-    db_host: str = "localhost"
-    db_port: int = 3306
-    db_user: str = "llm_readonly"
-    db_password: str = ""
-    db_name: str = "dyrtransportes"
+    # Query database — read-only MySQL the assistant reads (decision 0004/0011).
+    query_db_host: str = "localhost"
+    query_db_port: int = 3306
+    query_db_user: str = "llm_readonly"
+    query_db_password: str = ""
+    query_db_name: str = "dyrtransportes"
 
-    # App datastore — a separate writable Postgres (decision 0008), async SQLAlchemy DSN.
-    app_database_url: str = "postgresql+asyncpg://app:app@localhost:5432/dyr_app"
+    # App datastore — Postgres (decision 0008); assembled into a DSN by `app_database_url`.
+    app_db_host: str = "localhost"
+    app_db_port: int = 5432
+    app_db_user: str = "app"
+    app_db_password: str = "app"
+    app_db_name: str = "dyr_app"
 
     # Auth (decision 0009) — JWT signing. Secret MUST be overridden in any real deploy.
     jwt_secret: str = "dev-insecure-secret-change-me-in-production-0123456789"
@@ -80,7 +85,7 @@ class Settings:
     agent_max_iterations: int = 6
     statement_timeout_ms: int = 5000  # kills runaway queries (MySQL max_execution_time)
 
-    # RAG store location (task 0005).
+    # RAG vector store location (persisted via a docker volume in compose).
     chroma_path: str = ".chroma"
 
     # Web API — allowed CORS origins for the Vite frontend (task 0009/0010).
@@ -89,6 +94,14 @@ class Settings:
     @property
     def is_mock(self) -> bool:
         return self.llm_mode == "mock"
+
+    @property
+    def app_database_url(self) -> str:
+        pw = quote(self.app_db_password, safe="")
+        return (
+            f"postgresql+asyncpg://{self.app_db_user}:{pw}"
+            f"@{self.app_db_host}:{self.app_db_port}/{self.app_db_name}"
+        )
 
 
 @lru_cache(maxsize=1)
@@ -109,14 +122,16 @@ def get_settings() -> Settings:
         llm_model=_get("LLM_MODEL", "gpt-4o-mini"),
         llm_price_input_per_1m=_get_float("LLM_PRICE_INPUT_PER_1M", 0.0),
         llm_price_output_per_1m=_get_float("LLM_PRICE_OUTPUT_PER_1M", 0.0),
-        db_host=_get("DB_HOST", "localhost"),
-        db_port=_get_int("DB_PORT", 3306),
-        db_user=_get("DB_USER", "llm_readonly"),
-        db_password=_get("DB_PASSWORD", ""),
-        db_name=_get("DB_NAME", "dyrtransportes"),
-        app_database_url=_get(
-            "APP_DATABASE_URL", "postgresql+asyncpg://app:app@localhost:5432/dyr_app"
-        ),
+        query_db_host=_get("QUERY_DB_HOST", "localhost"),
+        query_db_port=_get_int("QUERY_DB_PORT", 3306),
+        query_db_user=_get("QUERY_DB_USER", "llm_readonly"),
+        query_db_password=_get("QUERY_DB_PASSWORD", ""),
+        query_db_name=_get("QUERY_DB_NAME", "dyrtransportes"),
+        app_db_host=_get("APP_DB_HOST", "localhost"),
+        app_db_port=_get_int("APP_DB_PORT", 5432),
+        app_db_user=_get("APP_DB_USER", "app"),
+        app_db_password=_get("APP_DB_PASSWORD", "app"),
+        app_db_name=_get("APP_DB_NAME", "dyr_app"),
         # Dev default is ≥32 bytes (PyJWT warns below that for HS256); a real deploy overrides it.
         jwt_secret=_get("JWT_SECRET", "dev-insecure-secret-change-me-in-production-0123456789"),
         jwt_algorithm=_get("JWT_ALGORITHM", "HS256"),
@@ -124,7 +139,6 @@ def get_settings() -> Settings:
         result_limit=_get_int("RESULT_LIMIT", 500),
         agent_max_iterations=_get_int("AGENT_MAX_ITERATIONS", 6),
         statement_timeout_ms=_get_int("STATEMENT_TIMEOUT_MS", 5000),
-        chroma_path=_get("CHROMA_PATH", ".chroma"),
         cors_origins=tuple(o.strip() for o in _get("CORS_ORIGINS", "").split(",") if o.strip())
         or _DEFAULT_CORS,
     )

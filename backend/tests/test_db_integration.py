@@ -34,15 +34,15 @@ def conn() -> Iterator[pymysql.connections.Connection]:
     s = get_settings()
     try:
         connection = pymysql.connect(
-            host=s.db_host,
-            port=s.db_port,
-            user=s.db_user,
-            password=s.db_password,
-            database=s.db_name,
+            host=s.query_db_host,
+            port=s.query_db_port,
+            user=s.query_db_user,
+            password=s.query_db_password,
+            database=s.query_db_name,
             connect_timeout=5,
         )
     except pymysql.MySQLError as exc:  # pragma: no cover - environment-dependent
-        pytest.skip(f"no MySQL reachable ({s.db_host}:{s.db_port}): {exc}")
+        pytest.skip(f"no MySQL reachable ({s.query_db_host}:{s.query_db_port}): {exc}")
     yield connection
     connection.close()
 

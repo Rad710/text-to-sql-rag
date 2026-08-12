@@ -71,14 +71,17 @@ jobs:
     runs-on: ubuntu-latest
     # Throwaway credentials for the ephemeral CI service container only — never used elsewhere.
     env:
-      MYSQL_ROOT_PASSWORD: ci-root-pw
-      MYSQL_DATABASE: dyrtransportes
-      DB_HOST: 127.0.0.1
-      DB_PORT: "3306"
-      DB_USER: llm_readonly
-      DB_PASSWORD: ci-readonly-pw
-      DB_NAME: dyrtransportes
-      APP_DATABASE_URL: postgresql+asyncpg://app:ci-app-pw@127.0.0.1:5432/dyr_app
+      QUERY_DB_ROOT_PASSWORD: ci-root-pw
+      QUERY_DB_HOST: 127.0.0.1
+      QUERY_DB_PORT: "3306"
+      QUERY_DB_USER: llm_readonly
+      QUERY_DB_PASSWORD: ci-readonly-pw
+      QUERY_DB_NAME: dyrtransportes
+      APP_DB_HOST: 127.0.0.1
+      APP_DB_PORT: "5432"
+      APP_DB_USER: app
+      APP_DB_PASSWORD: ci-app-pw
+      APP_DB_NAME: dyr_app
     services:
       mysql:
         image: mysql:8.4
@@ -114,8 +117,8 @@ jobs:
             -v "$PWD/mock-db/migration:/flyway/sql:ro" \
             flyway/flyway:11 \
             -url="jdbc:mysql://127.0.0.1:3306/dyrtransportes?allowPublicKeyRetrieval=true&useSSL=false" \
-            -user=root -password="$MYSQL_ROOT_PASSWORD" \
-            -placeholders.db_password="$DB_PASSWORD" \
+            -user=root -password="$QUERY_DB_ROOT_PASSWORD" \
+            -placeholders.db_password="$QUERY_DB_PASSWORD" \
             -connectRetries=60 -locations=filesystem:/flyway/sql migrate
 
       - name: Install uv
@@ -140,14 +143,17 @@ jobs:
     # Full-stack Playwright journey (task 0023): real browser → Vite (proxy) → FastAPI (mock) → both DBs.
     # Throwaway credentials for the ephemeral CI service containers only.
     env:
-      MYSQL_ROOT_PASSWORD: ci-root-pw
-      MYSQL_DATABASE: dyrtransportes
-      DB_HOST: 127.0.0.1
-      DB_PORT: "3306"
-      DB_USER: llm_readonly
-      DB_PASSWORD: ci-readonly-pw
-      DB_NAME: dyrtransportes
-      APP_DATABASE_URL: postgresql+asyncpg://app:ci-app-pw@127.0.0.1:5432/dyr_app
+      QUERY_DB_ROOT_PASSWORD: ci-root-pw
+      QUERY_DB_HOST: 127.0.0.1
+      QUERY_DB_PORT: "3306"
+      QUERY_DB_USER: llm_readonly
+      QUERY_DB_PASSWORD: ci-readonly-pw
+      QUERY_DB_NAME: dyrtransportes
+      APP_DB_HOST: 127.0.0.1
+      APP_DB_PORT: "5432"
+      APP_DB_USER: app
+      APP_DB_PASSWORD: ci-app-pw
+      APP_DB_NAME: dyr_app
     services:
       mysql:
         image: mysql:8.4
@@ -183,8 +189,8 @@ jobs:
             -v "$PWD/mock-db/migration:/flyway/sql:ro" \
             flyway/flyway:11 \
             -url="jdbc:mysql://127.0.0.1:3306/dyrtransportes?allowPublicKeyRetrieval=true&useSSL=false" \
-            -user=root -password="$MYSQL_ROOT_PASSWORD" \
-            -placeholders.db_password="$DB_PASSWORD" \
+            -user=root -password="$QUERY_DB_ROOT_PASSWORD" \
+            -placeholders.db_password="$QUERY_DB_PASSWORD" \
             -connectRetries=60 -locations=filesystem:/flyway/sql migrate
 
       - name: Install uv

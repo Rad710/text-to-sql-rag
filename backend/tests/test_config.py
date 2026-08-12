@@ -27,12 +27,40 @@ def test_get_settings_is_cached() -> None:
 
 def test_env_overrides_are_applied(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("LLM_MODE", "openai")
-    monkeypatch.setenv("DB_PORT", "3307")
+    monkeypatch.setenv("QUERY_DB_PORT", "3307")
     get_settings.cache_clear()
     s = get_settings()
     assert s.llm_mode == "openai"
     assert s.is_mock is False
-    assert s.db_port == 3307
+    assert s.query_db_port == 3307
+    get_settings.cache_clear()
+
+
+def test_app_database_url_assembled_from_parts() -> None:
+    s = Settings(
+        app_db_host="db.internal",
+        app_db_port=6543,
+        app_db_user="svc",
+        app_db_password="p@ss/word",  # special chars must be percent-encoded
+        app_db_name="appdb",
+    )
+    assert s.app_database_url == "postgresql+asyncpg://svc:p%40ss%2Fword@db.internal:6543/appdb"
+
+
+def test_app_db_env_parts_are_applied(monkeypatch: pytest.MonkeyPatch) -> None:
+    for k, v in {
+        "APP_DB_HOST": "pg.example.com",
+        "APP_DB_PORT": "5544",
+        "APP_DB_USER": "app",
+        "APP_DB_PASSWORD": "app",
+        "APP_DB_NAME": "prod_app",
+    }.items():
+        monkeypatch.setenv(k, v)
+    get_settings.cache_clear()
+    assert (
+        get_settings().app_database_url
+        == "postgresql+asyncpg://app:app@pg.example.com:5544/prod_app"
+    )
     get_settings.cache_clear()
 
 

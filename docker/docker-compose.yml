@@ -1,13 +1,5 @@
-# Base stack: the app (mock LLM by default) + the synthetic MySQL query DB.
-# Secrets come from a local .env (copy .env.example → .env); nothing sensitive is hardcoded here.
-# This file lives under docker/; run it from the repo root so the root .env is picked up:
-#   docker compose -f docker/docker-compose.yml up          (or set COMPOSE_FILE in .env)
-# A one-shot Flyway service migrates the mock DB (mock-db/migration/* — schema + seed + read-only grant;
-# decision 0011) once MySQL is healthy, then the app starts. No LLM API key needed (mock mode). Build
-# context is the repo root (..), not docker/.
-#
-# Pin the project name so container/volume names stay `text-to-sql-rag_*` regardless of the compose
-# file's folder (otherwise compose would derive the name from this docker/ directory).
+# Base dev stack: app (mock LLM) + mock MySQL (Flyway-migrated) + Postgres app store.
+# Run from the repo root so the root .env is read:  docker compose -f docker/docker-compose.yml up
 name: text-to-sql-rag
 services:
   app:
@@ -18,13 +10,21 @@ services:
       - "8000:8000"
     environment:
       LLM_MODE: ${LLM_MODE:-mock}
-      DB_HOST: mysql            # service name on the compose network
-      DB_PORT: "3306"
-      DB_USER: ${DB_USER:-llm_readonly}
-      DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env (copy .env.example)}
-      DB_NAME: dyrtransportes
-      # App datastore (decision 0008) — a separate writable Postgres, distinct from the read-only query DB.
-      APP_DATABASE_URL: postgresql+asyncpg://app:${APP_DB_PASSWORD:-app}@postgres:5432/dyr_app
+      LLM_BASE_URL: ${LLM_BASE_URL:-http://localhost:11434/v1}
+      LLM_MODEL: ${LLM_MODEL:-gpt-4o-mini}
+      LLM_API_KEY: ${LLM_API_KEY:-not-needed}
+      LLM_PRICE_INPUT_PER_1M: ${LLM_PRICE_INPUT_PER_1M:-0.0}
+      LLM_PRICE_OUTPUT_PER_1M: ${LLM_PRICE_OUTPUT_PER_1M:-0.0}
+      QUERY_DB_HOST: ${QUERY_DB_HOST:-mysql}
+      QUERY_DB_PORT: ${QUERY_DB_PORT:-3306}
+      QUERY_DB_USER: ${QUERY_DB_USER:-llm_readonly}
+      QUERY_DB_PASSWORD: ${QUERY_DB_PASSWORD:?set QUERY_DB_PASSWORD in .env}
+      QUERY_DB_NAME: ${QUERY_DB_NAME:-dyrtransportes}
+      APP_DB_HOST: ${APP_DB_HOST:-postgres}
+      APP_DB_PORT: ${APP_DB_PORT:-5432}
+      APP_DB_USER: ${APP_DB_USER:-app}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:-app}
+      APP_DB_NAME: ${APP_DB_NAME:-dyr_app}
     depends_on:
       mysql:
         condition: service_healthy
@@ -38,12 +38,14 @@ services:
       timeout: 3s
       retries: 5
       start_period: 10s
+    volumes:
+      - chroma:/app/.chroma
 
   mysql:
     image: mysql:8.4
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env (copy .env.example)}
-      MYSQL_DATABASE: dyrtransportes   # empty schema on first boot; Flyway fills it (see flyway service)
+      MYSQL_ROOT_PASSWORD: ${QUERY_DB_ROOT_PASSWORD:?set QUERY_DB_ROOT_PASSWORD in .env}
+      MYSQL_DATABASE: ${QUERY_DB_NAME:-dyrtransportes}
     ports:
       - "3306:3306"
     healthcheck:
@@ -53,39 +55,35 @@ services:
       retries: 10
       start_period: 30s
 
-  # One-shot mock-DB migrator (decision 0011): applies mock-db/migration/V*.sql (schema + seed +
-  # read-only grant) once MySQL is healthy, then exits. Idempotent — Flyway's schema-history table skips
-  # already-applied versions, so re-running (or a restart with a persisted volume) is a no-op.
+  # One-shot: migrate the mock DB, then exit (idempotent via Flyway's schema history; decision 0011).
   flyway:
     image: flyway/flyway:11
     depends_on:
       mysql:
         condition: service_healthy
     environment:
-      FLYWAY_URL: jdbc:mysql://mysql:3306/dyrtransportes?allowPublicKeyRetrieval=true&useSSL=false
+      FLYWAY_URL: jdbc:mysql://mysql:3306/${QUERY_DB_NAME:-dyrtransportes}?allowPublicKeyRetrieval=true&useSSL=false
       FLYWAY_USER: root
-      FLYWAY_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env (copy .env.example)}
+      FLYWAY_PASSWORD: ${QUERY_DB_ROOT_PASSWORD:?set QUERY_DB_ROOT_PASSWORD in .env}
       FLYWAY_LOCATIONS: filesystem:/flyway/sql
-      FLYWAY_CONNECT_RETRIES: "60"     # wait out MySQL's first-boot init before the first connect
-      # Injected into V3__readonly_user.sql as ${db_password} — keeps the credential out of the SQL file.
-      FLYWAY_PLACEHOLDERS_DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env (copy .env.example)}
+      FLYWAY_CONNECT_RETRIES: "60"
+      FLYWAY_PLACEHOLDERS_DB_PASSWORD: ${QUERY_DB_PASSWORD:?set QUERY_DB_PASSWORD in .env}
     command: migrate
     volumes:
       - ../mock-db/migration:/flyway/sql:ro
 
-  # App datastore (decision 0008): users / conversations / messages / feedback. Alembic migrates it.
   postgres:
     image: postgres:17
     environment:
-      POSTGRES_USER: app
-      POSTGRES_PASSWORD: ${APP_DB_PASSWORD:-app}   # local default; overridden in a real deploy
-      POSTGRES_DB: dyr_app
+      POSTGRES_USER: ${APP_DB_USER:-app}
+      POSTGRES_PASSWORD: ${APP_DB_PASSWORD:-app}
+      POSTGRES_DB: ${APP_DB_NAME:-dyr_app}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U app -d dyr_app"]
+      test: ["CMD-SHELL", "pg_isready -U ${APP_DB_USER:-app} -d ${APP_DB_NAME:-dyr_app}"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -93,3 +91,4 @@ services:
 
 volumes:
   pgdata:
+  chroma:

@@ -75,16 +75,16 @@ def introspect_from_settings() -> SchemaInfo:
     """Open a connection from the app settings and introspect the configured schema."""
     s = get_settings()
     conn = pymysql.connect(
-        host=s.db_host,
-        port=s.db_port,
-        user=s.db_user,
-        password=s.db_password,
-        database=s.db_name,
+        host=s.query_db_host,
+        port=s.query_db_port,
+        user=s.query_db_user,
+        password=s.query_db_password,
+        database=s.query_db_name,
         charset="utf8mb4",
         connect_timeout=5,
     )
     try:
-        return introspect(conn, s.db_name)
+        return introspect(conn, s.query_db_name)
     finally:
         conn.close()
 

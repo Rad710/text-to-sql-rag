@@ -50,11 +50,11 @@ def run_sql(query: str, settings: Settings | None = None) -> RunResult:
 
     try:
         conn = pymysql.connect(
-            host=s.db_host,
-            port=s.db_port,
-            user=s.db_user,
-            password=s.db_password,
-            database=s.db_name,
+            host=s.query_db_host,
+            port=s.query_db_port,
+            user=s.query_db_user,
+            password=s.query_db_password,
+            database=s.query_db_name,
             charset="utf8mb4",
             connect_timeout=5,
             read_timeout=max(1, s.statement_timeout_ms // 1000 + 1),
