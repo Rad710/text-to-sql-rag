@@ -100,23 +100,26 @@ a test, don't remove the check.
 - **Naming:** English for code. Domain terms from the freight business may stay Spanish where they don't
   translate cleanly (`shipment`, `driver_payroll`, `flete`). User-facing answer text: Spanish.
 - **Style:** ruff (format + lint), 4-space indent. Type hints on public functions; mypy clean.
-- **Structure:** pure/impure split (above). Config as a frozen dataclass, env-driven, no DB/network on
-  import. One clear module per concern, grouped into layered sub-packages
+- **Structure:** all Python lives under `backend/` (`backend/app` package, `backend/tests`,
+  `backend/evaluation`, `backend/alembic`, `backend/pyproject.toml`) — a sibling of `frontend/`. Pure/impure
+  split (above). Config as a frozen dataclass, env-driven, no DB/network on import. One clear module per
+  concern, grouped into layered sub-packages
   ([decision 0007](docs/decisions/0007-layered-package-structure.md)): `app/safety/` (validator, limits,
   execution), `app/rag/` (schema, introspect, corpus, embeddings, engine, retrieval), `app/llm/` (client
-  + prompts); `app/agent.py`, `app/api.py`, `app/config.py` at the top.
+  + prompts), `app/config/` (settings + rate limiter); `app/agent.py`, `app/api.py` at the top.
 - **Errors:** raise typed exceptions; never leak raw SQL or stack traces to the end user.
 
 ## Build & dev commands
 
-The project uses **uv**. `uv sync` creates `.venv` and installs deps (incl. the `dev` group).
+The project uses **uv**; the Python backend lives in **`backend/`** — run the `uv` commands from there.
+`uv sync` creates `backend/.venv` and installs deps (incl. the `dev` group).
 
 ```bash
+cd backend                                # the Python project root (all uv commands run here)
 uv sync                                   # set up / update the environment
 
 # run the streaming API (mock LLM by default — no key needed) — task 0009
 uv run uvicorn app.api:app --reload
-# frontend dev server (task 0010): cd frontend && pnpm dev
 
 # quality gates (all four must pass)
 uv run pytest
@@ -126,6 +129,11 @@ uv run mypy app evaluation
 
 # evaluation harness — execution accuracy on the gold set (needs the DB up)
 uv run python -m evaluation.runner
+```
+
+```bash
+# from the REPO ROOT — frontend dev server (task 0010)
+cd frontend && pnpm dev
 
 # containers — compose files live under docker/; run from the repo root (reads the root .env)
 docker compose -f docker/docker-compose.yml up --build

@@ -8,6 +8,10 @@ on:
 jobs:
   quality:
     runs-on: ubuntu-latest
+    # The Python project lives in backend/; all run steps below execute there (task 0035).
+    defaults:
+      run:
+        working-directory: backend
     steps:
       - uses: actions/checkout@v7
 
@@ -120,12 +124,15 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
+        working-directory: backend
         run: uv sync
 
       - name: Migrate the app datastore (Alembic → Postgres)
+        working-directory: backend
         run: uv run alembic upgrade head
 
       - name: Integration tests (live MySQL read-only guarantee + Postgres round-trip)
+        working-directory: backend
         run: uv run pytest -m integration
 
   e2e:
@@ -186,9 +193,11 @@ jobs:
           python-version: "3.12"
 
       - name: Install Python dependencies
+        working-directory: backend
         run: uv sync
 
       - name: Migrate the app datastore (Alembic → Postgres)
+        working-directory: backend
         run: uv run alembic upgrade head
 
       - name: Install pnpm
@@ -212,6 +221,7 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Start API (mock mode)
+        working-directory: backend
         run: |
           nohup uv run uvicorn app.api:app --host 127.0.0.1 --port 8000 > /tmp/api.log 2>&1 &
           for i in $(seq 1 30); do

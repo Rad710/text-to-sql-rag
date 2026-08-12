@@ -31,7 +31,7 @@ services:
     image: ghcr.io/rad710/text-to-sql-rag/app:${IMAGE_TAG:-latest}
     build:
       context: ..
-      dockerfile: docker/Dockerfile
+      dockerfile: docker/backend.Dockerfile
     # No published port — reachable only as `app:8000` on the compose network, via nginx.
     expose:
       - "8000"

@@ -52,9 +52,12 @@ Run the databases in Docker and the API + frontend as dev servers — all readin
 
 ```bash
 docker compose -f docker/docker-compose.yml up -d mysql postgres flyway   # DBs (:3306/:5432); Flyway seeds the mock schema
+
+cd backend                               # the Python project (all uv commands run here)
 uv run alembic upgrade head              # create the app-store schema (Postgres)
 uv run uvicorn app.api:app --reload      # API on :8000 (mock LLM by default)
-cd frontend && pnpm install && pnpm dev  # UI on :5173 (proxies to the API)
+
+cd ../frontend && pnpm install && pnpm dev   # UI on :5173 (proxies to the API)
 ```
 
 Open **http://localhost:5173**.
@@ -108,6 +111,7 @@ directly — with the exact same SQL-safety guarantees (it reuses the validator 
 writes are rejected). Install the extra and run it:
 
 ```bash
+cd backend
 uv sync --extra mcp
 uv run python -m app.mcp_server          # stdio (for a local client)
 uv run python -m app.mcp_server --http   # streamable HTTP on 127.0.0.1:8848/mcp
@@ -166,11 +170,11 @@ immutable decision log, and per-task commits. See [`docs/ai-workflow.md`](docs/a
 at [`docs/README.md`](docs/README.md).
 
 **Pre-commit hooks** run the same gates as CI (ruff, ruff-format, mypy + basic hygiene) before each
-commit. Enable them once after `uv sync`:
+commit. Enable them once from the repo root (config: [`.pre-commit-config.yaml`](.pre-commit-config.yaml)):
 
 ```bash
-uv run pre-commit install          # then hooks run automatically on git commit
-uv run pre-commit run --all-files  # run them on demand across the repo
+uvx pre-commit install          # then hooks run automatically on git commit
+uvx pre-commit run --all-files  # run them on demand across the repo
 ```
 
 CI's quality job also reports test coverage (`pytest --cov`) and fails under an 80% floor.

@@ -14,15 +14,15 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# Install dependencies first (cached layer) from the lockfile-ish project metadata.
-COPY pyproject.toml ./
+# Build context is the repo root (see docker/docker-compose*.yml); the Python project lives under backend/.
+# Install dependencies first (cached layer) from the project metadata.
+COPY backend/pyproject.toml ./
 RUN uv sync --no-dev --no-install-project
 
-COPY app ./app
+COPY backend/app ./app
 # Migrations run on boot (see docker-entrypoint.sh), so the app store schema is applied automatically.
-COPY alembic ./alembic
-COPY alembic.ini ./
-# Build context is the repo root (see docker/docker-compose*.yml); this file now lives under docker/.
+COPY backend/alembic ./alembic
+COPY backend/alembic.ini ./
 COPY docker/docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh
 

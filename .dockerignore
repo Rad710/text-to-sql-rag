@@ -1,19 +1,23 @@
 .git
-.venv
 venv
-__pycache__
 *.pyc
-.mypy_cache
-.ruff_cache
-.pytest_cache
-.chroma
 .env
 .env.*
 docs
-tests
 
-# Frontend build artifacts — both images build from the repo-root context (see docker/frontend.Dockerfile),
-# so these are excluded here rather than in a frontend-local .dockerignore.
+# Python caches / envs (now under backend/) — matched anywhere in the context.
+**/.venv
+**/__pycache__
+**/.mypy_cache
+**/.ruff_cache
+**/.pytest_cache
+**/.chroma
+
+# Not needed by either image build (the backend image copies only backend/{app,alembic,pyproject}).
+backend/tests
+backend/evaluation
+
+# Frontend build artifacts — both images build from the repo-root context (see docker/frontend.Dockerfile).
 **/node_modules
 frontend/dist
 frontend/.vite

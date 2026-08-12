@@ -1,5 +1,7 @@
 # Local pre-commit gates — the same checks CI runs, moved left so drift is caught before a push.
-# Install once:  uv run pre-commit install     Run on demand:  uv run pre-commit run --all-files
+# The Python project lives in backend/, so run pre-commit from the repo root via uv's tool runner
+# (config stays here at the repo root, where the git hook reads it):
+#   Install once:  uvx pre-commit install     Run on demand:  uvx pre-commit run --all-files
 # Hook versions are pinned; ruff-pre-commit is pinned to the same ruff as the dev group.
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -25,7 +27,8 @@ repos:
     hooks:
       - id: mypy
         name: mypy (app, evaluation)
-        entry: uv run mypy app evaluation
+        # Runs from the repo root; --directory backend runs mypy inside the backend project.
+        entry: uv run --directory backend mypy app evaluation
         language: system
         types: [python]
         pass_filenames: false

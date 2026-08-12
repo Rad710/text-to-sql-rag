@@ -55,6 +55,7 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 | [0032](0032-ghcr-images/) | **GHCR images** — a `release.yml` workflow builds + pushes the `app`/`web` images to `ghcr.io/rad710/text-to-sql-rag/*` on a `v*` tag; prod compose pulls them (`image:` + `${IMAGE_TAG}`), keeping a `build:` fallback | done | 0014, 0031 |
 | [0033](0033-config-package/) | **`app/config/` package** — group `config.py` + `ratelimit.py` into a sub-package with a re-exporting `__init__`; imports unchanged. First step of the repo reorg (plan 0033–0035) | done | — |
 | [0034](0034-mock-db-flyway/) | **`mock-db/` + Flyway** — rename `db/` → `mock-db/`; replace the init-SQL + shell grant with Flyway versioned migrations (`V1/V2/V3`) run as a one-shot compose service + in CI ([decision 0011](../decisions/0011-flyway-mock-db-migrations.md), supersedes 0004) | done | — |
+| [0035](0035-backend-consolidation/) | **`backend/` consolidation** — move all Python (`app`, `tests`, `evaluation`, `alembic`, `pyproject`, `uv.lock`) under `backend/` mirroring `frontend/`; rename `Dockerfile`→`backend.Dockerfile`; repoint CI/docker/docs. Behavior unchanged | done | 0033, 0034 |
 
 ## Backlog — open, unscheduled
 
@@ -65,6 +66,17 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 
 ## Done
 
+- [0035](0035-backend-consolidation/) — **`backend/` consolidation**: moved all Python (`app/`, `tests/`,
+  `evaluation/`, `alembic/` + `alembic.ini`, `pyproject.toml`, `uv.lock`, `.python-version`) under a new
+  `backend/` dir mirroring `frontend/` (the full-stack-fastapi-template layout); package stays `app/` and
+  pyproject internals are unchanged (they resolve from `backend/` as CWD). Renamed
+  `docker/Dockerfile`→`docker/backend.Dockerfile` and prefixed its COPY paths with `backend/` (context is
+  still the repo root); repointed both compose files. CI runs the Python steps with
+  `working-directory: backend` (Flyway + frontend steps unchanged); `.dockerignore` switched to `**/`-globs;
+  README/CLAUDE run `uv` from `backend/`; pre-commit driven via `uvx` from the root with the mypy hook using
+  `uv run --directory backend`. Root is now `backend/ frontend/ docker/ mock-db/ docs/ .github/`. Verified:
+  gates green from `backend/` (128 passed), backend image builds, compose configs resolve, CI YAML parses.
+  Closes the repo reorg (0033–0035).
 - [0034](0034-mock-db-flyway/) — **`mock-db/` + Flyway**: renamed `db/` → `mock-db/` (the folder only ever
   stood up a *mock* of the DYR schema — the real one lives in a separate prod project and the app
   introspects it live). Replaced the `db/init/*` first-boot scripts + `03_grant_readonly.sh` with **Flyway**
