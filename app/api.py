@@ -23,12 +23,11 @@ from app import __version__
 from app.agent import AgentEvent, stream
 from app.auth.deps import get_current_user
 from app.auth.router import router as auth_router
-from app.config import get_settings
+from app.config import RateLimiter, get_settings
 from app.rag.corpus import build_corpus
 from app.rag.engine import RagStore
 from app.rag.introspect import introspect_from_settings
 from app.rag.schema import SchemaInfo
-from app.ratelimit import RateLimiter
 from app.store.conversations import ConversationRecorder, get_recorder
 from app.store.models import User
 from app.store.router import feedback_router

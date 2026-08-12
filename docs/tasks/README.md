@@ -53,6 +53,7 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 | [0030](0030-frontend-restructure/) | **Frontend restructure** — conventional layered layout (`pages/ components/ hooks/ context/ api/ lib/ tests/`) + react-router (`/login` + guarded `/`) + `AuthProvider`; anonymous IIFE removed; 4-space formatting. Behavior unchanged | done | 0010 |
 | [0031](0031-docker-folder/) | **Docker folder** — move all six Docker files (`Dockerfile`, both `docker-compose*.yml`, `docker-entrypoint.sh`, frontend image + `nginx.conf`) into `docker/`; repo-root build context; pinned project name; docs use `-f docker/…`. Behavior unchanged | done | 0014 |
 | [0032](0032-ghcr-images/) | **GHCR images** — a `release.yml` workflow builds + pushes the `app`/`web` images to `ghcr.io/rad710/text-to-sql-rag/*` on a `v*` tag; prod compose pulls them (`image:` + `${IMAGE_TAG}`), keeping a `build:` fallback | done | 0014, 0031 |
+| [0033](0033-config-package/) | **`app/config/` package** — group `config.py` + `ratelimit.py` into a sub-package with a re-exporting `__init__`; imports unchanged. First step of the repo reorg (plan 0033–0035) | done | — |
 
 ## Backlog — open, unscheduled
 
@@ -63,6 +64,11 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 
 ## Done
 
+- [0033](0033-config-package/) — **`app/config/` package**: grouped the two loose cross-cutting modules
+  (`app/config.py` settings + `app/ratelimit.py` limiter) into an `app/config/` sub-package
+  (`config.py` + `ratelimit.py` + a re-exporting `__init__.py`) so `from app.config import …` keeps working
+  for all 17 importers; only the 3 `app.ratelimit` sites changed. Moves via `git mv`. Gates green (128
+  passed). First step of the repo reorg (plan: 0033 config → 0034 mock-db+Flyway → 0035 `backend/`).
 - [0032](0032-ghcr-images/) — **GHCR images**: prod no longer builds on the VM. A new
   `.github/workflows/release.yml` (matrix over `app`/`web`) builds both images from the repo-root context
   and pushes them to `ghcr.io/rad710/text-to-sql-rag/{app,web}` on a `v*` tag (or manual dispatch), authed

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.ratelimit import RateLimiter
+from app.config import RateLimiter
 
 
 def test_allows_up_to_the_per_minute_limit_then_denies() -> None:

@@ -10,11 +10,11 @@ from fastapi.testclient import TestClient
 
 from app.api import app, get_chat_limiter, get_service
 from app.auth.deps import get_current_user
+from app.config import RateLimiter
 from app.rag.corpus import build_corpus
 from app.rag.embeddings import OfflineEmbedder
 from app.rag.engine import RagStore
 from app.rag.schema import Column, ForeignKey, SchemaInfo, Table
-from app.ratelimit import RateLimiter
 from app.store.conversations import get_recorder
 from app.store.models import User
 
