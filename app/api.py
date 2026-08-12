@@ -114,8 +114,15 @@ class ChatRequest(BaseModel):
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    """Liveness probe."""
-    return {"status": "ok", "version": __version__}
+    """Liveness probe. Also surfaces the runtime mode so the UI can label it honestly."""
+    s = get_settings()
+    return {
+        "status": "ok",
+        "version": __version__,
+        "llm_mode": s.llm_mode,
+        "deploy_mode": s.deploy_mode,
+        "model": s.llm_model if s.llm_mode == "openai" else "mock",
+    }
 
 
 def _sse(event: AgentEvent) -> str:

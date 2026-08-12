@@ -18,6 +18,7 @@ import { getLastAssistantMessageId, setLastAssistantMessageId, submitFeedback } 
 import { type ConversationSummary, getConversationMessages, listConversations } from "./history";
 import { LoginScreen } from "./LoginScreen";
 import { adapter } from "./runtime";
+import { fetchServerMode } from "./server";
 
 const SUGGESTIONS = [
   "facturación total por ruta",
@@ -80,25 +81,30 @@ export default function App() {
   const [initialMessages, setInitialMessages] = useState<ThreadMessageLike[]>([]);
   const [paneKey, setPaneKey] = useState(0); // bumped only to remount ChatPane (switch/new)
   const [sidebarOpen, setSidebarOpen] = useState(false); // mobile drawer (task 0026)
+  const [modeLabel, setModeLabel] = useState(""); // runtime mode shown in the header (task 0029)
 
-  const refreshList = useCallback(() => {
-    listConversations().then(setConversations);
+  const refreshList = useCallback(async () => {
+    setConversations(await listConversations());
   }, []);
 
   useEffect(() => {
-    fetchMe().then((u) => {
-      setUser(u);
+    // The auth check and the header mode label are independent, so fetch them together. The header
+    // label reflects the real runtime mode (see fetchServerMode), not a hardcoded "mock mode".
+    void (async () => {
+      const [me, mode] = await Promise.all([fetchMe(), fetchServerMode()]);
+      setUser(me);
+      setModeLabel(mode);
       setLoading(false);
-    });
+    })();
   }, []);
 
   useEffect(() => {
     if (!user) return;
-    refreshList();
+    void refreshList();
     // When a turn (re)identifies its conversation, highlight it + refresh the list — no remount.
     onConversationStarted((id) => {
       setActiveId(id);
-      refreshList();
+      void refreshList();
     });
     return () => onConversationStarted(null);
   }, [user, refreshList]);
@@ -147,7 +153,7 @@ export default function App() {
     );
   }
   if (!user) {
-    return <LoginScreen onAuthed={() => fetchMe().then(setUser)} />;
+    return <LoginScreen onAuthed={async () => setUser(await fetchMe())} />;
   }
 
   return (
@@ -165,7 +171,7 @@ export default function App() {
             </button>
             <span className="truncate font-semibold">🚚 DYR Transportes — Data Assistant</span>
             <span className="text-muted-foreground hidden text-xs sm:inline">
-              text-to-SQL · RAG · mock mode
+              text-to-SQL · RAG{modeLabel ? ` · ${modeLabel}` : ""}
             </span>
           </div>
           <div className="flex shrink-0 items-center gap-3">

@@ -57,6 +57,9 @@ test("authenticated: renders tool steps + result table + answer, and sends the B
     if (url === "/auth/me") {
       return Promise.resolve(jsonResponse({ id: "u1", email: "a@b.com", name: "Ana" }));
     }
+    if (url === "/health") {
+      return Promise.resolve(jsonResponse({ status: "ok", llm_mode: "mock", model: "mock" }));
+    }
     if (url === "/conversations") {
       return Promise.resolve(jsonResponse([]));
     }

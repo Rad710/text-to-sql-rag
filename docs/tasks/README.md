@@ -49,6 +49,7 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 | [0026](0026-responsive-sidebar/) | **Responsive sidebar (mobile drawer)** — off-canvas hamburger drawer + backdrop on mobile, static column on desktop; + e2e geometry test | done | 0019, 0023 |
 | [0027](0027-feedback-highlight/) | **Highlight selected 👍/👎** — style the `data-submitted` state so the chosen rating is filled/primary | done | 0020 |
 | [0028](0028-polish-fixes/) | **Polish fixes** — remove double-persisting regenerate, graceful logout on mid-session 401, grouped/right-aligned number formatting in result tables | done | 0019, 0020 |
+| [0029](0029-honest-mode-header/) | **Honest mode header** — `/health` surfaces the real LLM/deploy mode; header shows it (not hardcoded "mock"); `conftest` forces mock so tests ignore a local `.env` | done | 0015 |
 
 ## Backlog — open, unscheduled
 
@@ -108,6 +109,10 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 - [0020](0020-feedback/) — **feedback 👍/👎**: `POST /feedback` (owner-checked upsert, one per message);
   `/chat` emits the assistant message id + `GET /conversations/{id}` carries ids; thumbs in the action bar
   (idiomatic assistant-ui `FeedbackAdapter`) POST it. Integration + browser-verified (row in Postgres).
+- [0029](0029-honest-mode-header/) — **honest mode header**: the header hardcoded "mock mode" even under a
+  real LLM. `/health` now returns `llm_mode`/`deploy_mode`/`model` and the header shows the real value
+  (verified: "llama3.2:3b" in openai mode). Also added `tests/conftest.py` forcing `LLM_MODE=mock` so the
+  suite is hermetic — a dev's `.env=openai` no longer makes unit tests hit the real Ollama.
 - [0028](0028-polish-fixes/) — **polish fixes** (from the audit): (1) removed the regenerate button that
   re-POSTed `/chat` and wrote a **duplicate turn** to the store (verified: 1 turn → 4 messages); (2) a
   mid-session **401 now bounces to login** (an `onUnauthorized` seam clears the token) instead of leaving a

@@ -95,10 +95,12 @@ export const adapter: ChatModelAdapter = {
           retry > 0 && retry <= 90
             ? ` Probá de nuevo en ${retry} s.`
             : " Probá de nuevo más tarde.";
-        const detail = await res
-          .json()
-          .then((d: { detail?: string }) => d.detail)
-          .catch(() => undefined);
+        let detail: string | undefined;
+        try {
+          detail = ((await res.json()) as { detail?: string }).detail;
+        } catch {
+          detail = undefined;
+        }
         yield {
           content: [
             { type: "text", text: `⚠️ ${detail ?? "Alcanzaste el límite de consultas."}${hint}` },
