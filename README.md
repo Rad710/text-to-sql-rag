@@ -39,28 +39,38 @@ cp .env.example .env      # then edit the change-me* values (see the comments in
 ```
 
 **Run the whole app in Docker** — nginx + API + MySQL + Postgres behind one URL, migrations on boot.
-The compose files live under [`docker/`](docker/); run them from the repo root so the root `.env` is read:
+Compose files live under [`docker/`](docker/); pass `--env-file .env` (Compose looks for `.env` next to
+the compose file, not the repo root):
 
 ```bash
-docker compose -f docker/docker-compose.prod.yml up -d --build
+docker compose -f docker/docker-compose.prod.yml --env-file .env up -d --build
 # → http://localhost   (set WEB_PORT=8080 in .env if port 80 is taken)
 ```
 
 ### Local development (hot reload)
 
-Run the databases in Docker and the API + frontend as dev servers — all reading the same `.env`:
+Databases in Docker; API + frontend as dev servers. Three steps (frontend in its own terminal):
 
 ```bash
-docker compose -f docker/docker-compose.yml up -d mysql postgres flyway   # DBs (:3306/:5432); Flyway seeds the mock schema
+# 1. databases — MySQL (Flyway seeds the mock schema) + Postgres.
+#    Pass --env-file: Compose reads .env next to the compose file, not the repo root.
+docker compose -f docker/docker-compose.yml --env-file .env up -d mysql postgres flyway
 
-cd backend                               # the Python project (all uv commands run here)
-uv run alembic upgrade head              # create the app-store schema (Postgres)
-uv run uvicorn app.api:app --reload      # API on :8000 (mock LLM by default)
+# 2. backend API — migrate the app store, then serve (mock LLM, hot reload). Runs from backend/.
+cd backend && uv run alembic upgrade head && uv run uvicorn app.api:app --reload   # → :8000
 
-cd ../frontend && pnpm install && pnpm dev   # UI on :5173 (proxies to the API)
+# 3. frontend (new terminal)
+cd frontend && pnpm install && pnpm dev                                            # → :5173
 ```
 
-Open **http://localhost:5173**.
+Open **http://localhost:5173** — `LLM_MODE=mock` needs no API key. `alembic upgrade head` is idempotent,
+so re-running step 2 is safe; the migration is required because host-run `uvicorn` (unlike the Docker
+image) does not apply it automatically.
+
+> **Port already in use?** The DBs publish `3306` / `5432`. If one is taken, run that DB standalone on a
+> free port and point `.env` at it — e.g. Postgres on `55432`:
+> `docker run -d --name dyr-postgres -e POSTGRES_USER=app -e POSTGRES_PASSWORD=change-me-app -e POSTGRES_DB=dyr_app -p 55432:5432 postgres:17`,
+> then set `APP_DB_PORT=55432` in `.env` (same idea with `QUERY_DB_PORT` for MySQL).
 
 ### Using a real model (Ollama / vLLM)
 
