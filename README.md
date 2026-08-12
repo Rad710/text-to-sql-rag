@@ -38,10 +38,11 @@ template and set the `change-me` secrets — the mock LLM needs no API key:
 cp .env.example .env      # then edit the change-me* values (see the comments in the file)
 ```
 
-**Run the whole app in Docker** — nginx + API + MySQL + Postgres behind one URL, migrations on boot:
+**Run the whole app in Docker** — nginx + API + MySQL + Postgres behind one URL, migrations on boot.
+The compose files live under [`docker/`](docker/); run them from the repo root so the root `.env` is read:
 
 ```bash
-docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker/docker-compose.prod.yml up -d --build
 # → http://localhost   (set WEB_PORT=8080 in .env if port 80 is taken)
 ```
 
@@ -50,7 +51,7 @@ docker compose -f docker-compose.prod.yml up -d --build
 Run the databases in Docker and the API + frontend as dev servers — all reading the same `.env`:
 
 ```bash
-docker compose up -d mysql postgres      # query DB (:3306) + app store (:5432)
+docker compose -f docker/docker-compose.yml up -d mysql postgres   # query DB (:3306) + app store (:5432)
 uv run alembic upgrade head              # create the app-store schema
 uv run uvicorn app.api:app --reload      # API on :8000 (mock LLM by default)
 cd frontend && pnpm install && pnpm dev  # UI on :5173 (proxies to the API)
@@ -140,7 +141,7 @@ query DB, and the Postgres app store.
 
 ```bash
 cp .env.example .env   # set the change-me secrets (a real JWT_SECRET), then:
-docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker/docker-compose.prod.yml up -d --build
 # → the app is served on http://localhost (nginx); API is internal-only
 ```
 

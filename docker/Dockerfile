@@ -19,7 +19,8 @@ COPY app ./app
 # Migrations run on boot (see docker-entrypoint.sh), so the app store schema is applied automatically.
 COPY alembic ./alembic
 COPY alembic.ini ./
-COPY docker-entrypoint.sh ./
+# Build context is the repo root (see docker/docker-compose*.yml); this file now lives under docker/.
+COPY docker/docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh
 
 EXPOSE 8000

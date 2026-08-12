@@ -125,8 +125,8 @@ uv run mypy app evaluation
 # evaluation harness — execution accuracy on the gold set (needs the DB up)
 uv run python -m evaluation.runner
 
-# containers (app only for now; MySQL added in task 0002)
-docker compose up --build
+# containers — compose files live under docker/; run from the repo root (reads the root .env)
+docker compose -f docker/docker-compose.yml up --build
 ```
 
 ## Reference repos (do not copy secrets or business logic)

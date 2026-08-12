@@ -51,6 +51,7 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 | [0028](0028-polish-fixes/) | **Polish fixes** — remove double-persisting regenerate, graceful logout on mid-session 401, grouped/right-aligned number formatting in result tables | done | 0019, 0020 |
 | [0029](0029-honest-mode-header/) | **Honest mode header** — `/health` surfaces the real LLM/deploy mode; header shows it (not hardcoded "mock"); `conftest` forces mock so tests ignore a local `.env` | done | 0015 |
 | [0030](0030-frontend-restructure/) | **Frontend restructure** — conventional layered layout (`pages/ components/ hooks/ context/ api/ lib/ tests/`) + react-router (`/login` + guarded `/`) + `AuthProvider`; anonymous IIFE removed; 4-space formatting. Behavior unchanged | done | 0010 |
+| [0031](0031-docker-folder/) | **Docker folder** — move all six Docker files (`Dockerfile`, both `docker-compose*.yml`, `docker-entrypoint.sh`, frontend image + `nginx.conf`) into `docker/`; repo-root build context; pinned project name; docs use `-f docker/…`. Behavior unchanged | done | 0014 |
 
 ## Backlog — open, unscheduled
 
@@ -61,6 +62,15 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 
 ## Done
 
+- [0031](0031-docker-folder/) — **docker folder**: the repo root had six loose Docker files (backend
+  `Dockerfile`, `docker-compose.yml`, `docker-compose.prod.yml`, `docker-entrypoint.sh`, plus
+  `frontend/Dockerfile` + `frontend/nginx.conf`). Collected all of them under `docker/` (moves via
+  `git mv`). Both images now build from the **repo-root context** (`context: ..`, `dockerfile: docker/…`)
+  so the frontend build can reach `docker/nginx.conf`; `.dockerignore` consolidated to the root (the only
+  place Docker reads it) and `frontend/.dockerignore` removed; `name: text-to-sql-rag` pinned in both
+  compose files so container/volume names don't shift to `docker_*`. README/DEPLOY/CLAUDE commands updated
+  to `-f docker/…` (run from the repo root). Verified: both compose files resolve + **both images build**;
+  backend untouched. One follow-up left for the owner: a one-line `.env.example` edit (permission-blocked).
 - [0030](0030-frontend-restructure/) — **frontend restructure**: reorganized the React app from a flat
   `src/` + one components folder + co-located tests + a 200-line `App.tsx` with an anonymous
   `void (async()=>{})()` IIFE into a **conventional layered layout** (`pages/ components/ hooks/ context/

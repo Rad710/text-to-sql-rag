@@ -1,10 +1,18 @@
 # Base stack: the app (mock LLM by default) + the synthetic MySQL query DB.
 # Secrets come from a local .env (copy .env.example → .env); nothing sensitive is hardcoded here.
-# `docker compose up` brings up MySQL, auto-applies db/init/* (schema + seed + read-only grant),
-# then starts the app once MySQL is healthy. No LLM API key needed (mock mode).
+# This file lives under docker/; run it from the repo root so the root .env is picked up:
+#   docker compose -f docker/docker-compose.yml up          (or set COMPOSE_FILE in .env)
+# It auto-applies db/init/* (schema + seed + read-only grant), then starts the app once MySQL is
+# healthy. No LLM API key needed (mock mode). Build context is the repo root (..), not docker/.
+#
+# Pin the project name so container/volume names stay `text-to-sql-rag_*` regardless of the compose
+# file's folder (otherwise compose would derive the name from this docker/ directory).
+name: text-to-sql-rag
 services:
   app:
-    build: .
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
     ports:
       - "8000:8000"
     environment:
@@ -38,7 +46,7 @@ services:
     ports:
       - "3306:3306"
     volumes:
-      - ./db/init:/docker-entrypoint-initdb.d:ro
+      - ../db/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
       interval: 10s

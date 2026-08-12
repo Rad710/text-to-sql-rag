@@ -1,8 +1,0 @@
-# Keep the build context small and never overwrite the image's installed deps with the host's.
-node_modules
-dist
-.vite
-coverage
-.playwright-mcp
-*.log
-.DS_Store

@@ -47,15 +47,15 @@ For a **live** (real-LLM) deploy, also set `DEPLOY_MODE=live`, `LLM_MODE=openai`
 ## 2. Bring it up
 
 ```bash
-docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker/docker-compose.prod.yml up -d --build
 ```
 
 First boot: MySQL applies `db/init/*` (schema + synthetic seed + read-only grant), Postgres starts, the
 app runs `alembic upgrade head`, then nginx comes up. Watch progress with:
 
 ```bash
-docker compose -f docker-compose.prod.yml ps
-docker compose -f docker-compose.prod.yml logs -f app
+docker compose -f docker/docker-compose.prod.yml ps
+docker compose -f docker/docker-compose.prod.yml logs -f app
 ```
 
 ## 3. Verify
@@ -73,7 +73,7 @@ nginx here listens on plain `:80`. For HTTPS, put a TLS terminator in front — 
 
 - **Caddy** on the host (automatic Let's Encrypt): reverse-proxy `yourdomain` → `localhost:80`.
 - **Cloudflare** proxy in front of the VM.
-- Or add certs + a `443` server block to `frontend/nginx.conf` and publish `443` on `web`.
+- Or add certs + a `443` server block to `docker/nginx.conf` and publish `443` on `web`.
 
 ## 5. Demo ↔ live (real LLM)
 
@@ -88,19 +88,19 @@ LLM_MODEL=llama3.1
 LLM_API_KEY=ollama
 ```
 
-then `docker compose -f docker-compose.prod.yml up -d` (recreates `app`). See the README "Deploy modes"
+then `docker compose -f docker/docker-compose.prod.yml up -d` (recreates `app`). See the README "Deploy modes"
 and decisions [0010](docs/decisions/0010-rate-limiting-deploy-modes.md) / [0015](docs/tasks/0015-real-llm-config/).
 
 ## 6. Update / teardown / backup
 
 ```bash
-git pull && docker compose -f docker-compose.prod.yml up -d --build   # deploy a new version
-docker compose -f docker-compose.prod.yml logs -f                     # tail logs
-docker compose -f docker-compose.prod.yml down                        # stop (keeps volumes)
-docker compose -f docker-compose.prod.yml down -v                     # stop + DROP data volumes
+git pull && docker compose -f docker/docker-compose.prod.yml up -d --build   # deploy a new version
+docker compose -f docker/docker-compose.prod.yml logs -f                     # tail logs
+docker compose -f docker/docker-compose.prod.yml down                        # stop (keeps volumes)
+docker compose -f docker/docker-compose.prod.yml down -v                     # stop + DROP data volumes
 
 # Back up the app store (users/conversations/feedback):
-docker compose -f docker-compose.prod.yml exec postgres pg_dump -U app dyr_app > dyr_app_backup.sql
+docker compose -f docker/docker-compose.prod.yml exec postgres pg_dump -U app dyr_app > dyr_app_backup.sql
 ```
 
 Data lives in the named volumes `pgdata` (app store) and `mysqldata` (synthetic DB — reproducible from
