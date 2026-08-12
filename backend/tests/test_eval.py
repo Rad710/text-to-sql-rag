@@ -5,7 +5,12 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from pymysql import MySQLError
 
+from app.rag.corpus import build_corpus
+from app.rag.embeddings import OfflineEmbedder
+from app.rag.engine import RagStore
+from app.rag.introspect import introspect_from_settings
 from evaluation.cases import GOLD_CASES
 from evaluation.runner import _normalize, format_report, run_eval
 
@@ -21,16 +26,9 @@ def test_normalize_distinguishes_values() -> None:
 @pytest.mark.integration
 def test_mock_execution_accuracy_is_100(tmp_path: Path) -> None:
     """In mock mode the gold set must score 100% — a pipeline + example-corpus regression guard."""
-    import pymysql
-
-    from app.rag.corpus import build_corpus
-    from app.rag.embeddings import OfflineEmbedder
-    from app.rag.engine import RagStore
-    from app.rag.introspect import introspect_from_settings
-
     try:
         schema = introspect_from_settings()
-    except pymysql.MySQLError as exc:  # pragma: no cover - environment-dependent
+    except MySQLError as exc:  # pragma: no cover - environment-dependent
         pytest.skip(f"no MySQL reachable: {exc}")
 
     store = RagStore(path=str(tmp_path), embedder=OfflineEmbedder())

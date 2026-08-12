@@ -9,7 +9,11 @@ from __future__ import annotations
 import asyncio
 
 import pytest
+from sqlalchemy import select
+from sqlalchemy.exc import InterfaceError, OperationalError
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
+from app.config import get_settings
 from app.store.models import Base, Conversation, Feedback, Message, User
 
 
@@ -43,12 +47,6 @@ def test_feedback_is_one_per_message() -> None:
 @pytest.mark.integration
 def test_store_round_trip() -> None:
     """Insert user → conversation → message → feedback and read it back against a live Postgres."""
-    from sqlalchemy import select
-    from sqlalchemy.exc import InterfaceError, OperationalError
-    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-
-    from app.config import get_settings
-
     url = get_settings().app_database_url
 
     async def run() -> None:

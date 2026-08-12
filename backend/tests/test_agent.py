@@ -5,9 +5,14 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
+from pymysql import MySQLError
 
-from app.agent import _EXHAUSTED, AgentTools, answer_question, stream_answer
+from app.agent import _EXHAUSTED, AgentTools, answer_question, ask, stream_answer
 from app.llm.client import LlmResponse, ToolCall, Usage
+from app.rag.corpus import build_corpus
+from app.rag.embeddings import OfflineEmbedder
+from app.rag.engine import RagStore
+from app.rag.introspect import introspect_from_settings
 from app.safety.execution import RunResult
 
 
@@ -198,17 +203,9 @@ def test_history_is_prepended_before_the_question() -> None:
 @pytest.mark.integration
 def test_ask_end_to_end(tmp_path: Any) -> None:
     """Real mock LLM + real RAG store + live MySQL: question → answer."""
-    import pymysql
-
-    from app.agent import ask
-    from app.rag.corpus import build_corpus
-    from app.rag.embeddings import OfflineEmbedder
-    from app.rag.engine import RagStore
-    from app.rag.introspect import introspect_from_settings
-
     try:
         schema = introspect_from_settings()
-    except pymysql.MySQLError as exc:  # pragma: no cover - environment-dependent
+    except MySQLError as exc:  # pragma: no cover - environment-dependent
         pytest.skip(f"no MySQL reachable: {exc}")
 
     store = RagStore(path=str(tmp_path), embedder=OfflineEmbedder())

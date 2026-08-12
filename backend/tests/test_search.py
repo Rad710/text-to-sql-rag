@@ -5,10 +5,12 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from pymysql import MySQLError
 
 from app.rag.corpus import build_corpus
 from app.rag.embeddings import OfflineEmbedder
 from app.rag.engine import RagStore
+from app.rag.introspect import introspect_from_settings
 from app.rag.schema import Column, ForeignKey, SchemaInfo, Table
 
 
@@ -70,13 +72,9 @@ def test_relationship_following_surfaces_unnamed_table(tmp_path: Path) -> None:
 
 @pytest.mark.integration
 def test_search_against_live_schema(tmp_path: Path) -> None:
-    import pymysql
-
-    from app.rag.introspect import introspect_from_settings
-
     try:
         schema = introspect_from_settings()
-    except pymysql.MySQLError as exc:  # pragma: no cover - environment-dependent
+    except MySQLError as exc:  # pragma: no cover - environment-dependent
         pytest.skip(f"no MySQL reachable: {exc}")
 
     store = RagStore(path=str(tmp_path), embedder=OfflineEmbedder())

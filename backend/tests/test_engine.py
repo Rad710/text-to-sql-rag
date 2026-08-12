@@ -5,10 +5,12 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from pymysql import MySQLError
 
 from app.rag.corpus import DOCS, EXAMPLES, build_corpus
 from app.rag.embeddings import OfflineEmbedder
 from app.rag.engine import RagStore
+from app.rag.introspect import introspect_from_settings
 from app.rag.schema import Column, ForeignKey, SchemaInfo, Table
 
 DRIVER = Table(
@@ -73,13 +75,9 @@ def test_query_empty_collection_is_safe(tmp_path: Path) -> None:
 @pytest.mark.integration
 def test_seed_from_live_introspected_schema(tmp_path: Path) -> None:
     """The full pipeline: introspect the live DB → build corpus → seed → query."""
-    import pymysql
-
-    from app.rag.introspect import introspect_from_settings
-
     try:
         schema = introspect_from_settings()
-    except pymysql.MySQLError as exc:  # pragma: no cover - environment-dependent
+    except MySQLError as exc:  # pragma: no cover - environment-dependent
         pytest.skip(f"no MySQL reachable: {exc}")
 
     store = _store(tmp_path)

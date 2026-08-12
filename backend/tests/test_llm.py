@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 import json
+from types import SimpleNamespace as NS
 from typing import Any
+from unittest.mock import patch
+
+import openai
 
 from app.config import Settings
 from app.llm.client import (
@@ -128,8 +132,6 @@ def test_get_llm_openai_mode() -> None:
 def _fake_response(
     content: str | None, tool_calls: list[tuple[str, str, str]], pt: int, ct: int
 ) -> Any:
-    from types import SimpleNamespace as NS
-
     calls = [NS(id=i, function=NS(name=n, arguments=a)) for i, n, a in tool_calls]
     message = NS(content=content, tool_calls=calls or None)
     return NS(choices=[NS(message=message)], usage=NS(prompt_tokens=pt, completion_tokens=ct))
@@ -176,10 +178,6 @@ def test_openai_provider_parses_plain_content() -> None:
 def test_openai_client_points_at_configured_endpoint() -> None:
     """Built with the configured base_url/api_key — so it can target a local Ollama or vLLM
     server (task 0015), not just api.openai.com."""
-    from unittest.mock import patch
-
-    import openai
-
     settings = Settings(
         llm_mode="openai",
         llm_base_url="http://localhost:11434/v1",  # e.g. Ollama

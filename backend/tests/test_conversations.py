@@ -8,7 +8,12 @@ import uuid
 
 import httpx
 import pytest
+from sqlalchemy.exc import InterfaceError, OperationalError
+from sqlalchemy.ext.asyncio import create_async_engine
 
+import app.store.engine as store_engine
+from app.api import app, get_service
+from app.config import get_settings
 from app.rag.corpus import build_corpus
 from app.rag.embeddings import OfflineEmbedder
 from app.rag.engine import RagStore
@@ -26,13 +31,6 @@ def _schema() -> SchemaInfo:
 
 @pytest.mark.integration
 def test_chat_persists_and_history_is_isolated_per_user() -> None:
-    from sqlalchemy.exc import InterfaceError, OperationalError
-    from sqlalchemy.ext.asyncio import create_async_engine
-
-    import app.store.engine as store_engine
-    from app.api import app, get_service
-    from app.config import get_settings
-
     url = get_settings().app_database_url
     schema = _schema()
     store = RagStore(path=tempfile.mkdtemp(), embedder=OfflineEmbedder())

@@ -7,13 +7,16 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from pymysql import MySQLError
 
+import app.api as api
 from app.api import app, get_chat_limiter, get_service
 from app.auth.deps import get_current_user
 from app.config import RateLimiter
 from app.rag.corpus import build_corpus
 from app.rag.embeddings import OfflineEmbedder
 from app.rag.engine import RagStore
+from app.rag.introspect import introspect_from_settings
 from app.rag.schema import Column, ForeignKey, SchemaInfo, Table
 from app.store.conversations import get_recorder
 from app.store.models import User
@@ -134,14 +137,9 @@ def test_chat_rate_limited_returns_429(client: TestClient) -> None:
 
 @pytest.mark.integration
 def test_chat_end_to_end_live() -> None:
-    import pymysql
-
-    import app.api as api
-    from app.rag.introspect import introspect_from_settings
-
     try:
         introspect_from_settings()
-    except pymysql.MySQLError as exc:  # pragma: no cover - environment-dependent
+    except MySQLError as exc:  # pragma: no cover - environment-dependent
         pytest.skip(f"no MySQL reachable: {exc}")
 
     api._service = None  # force a fresh build against the live DB

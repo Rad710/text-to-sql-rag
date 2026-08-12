@@ -4,17 +4,26 @@ from __future__ import annotations
 
 import asyncio
 import uuid
+from collections.abc import AsyncIterator
 
+import httpx
 import jwt
 import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy.exc import InterfaceError, OperationalError
+from sqlalchemy.ext.asyncio import create_async_engine
 
+from app.api import app
 from app.auth.security import (
     create_access_token,
     decode_token,
     hash_password,
     verify_password,
 )
-from app.config import Settings
+from app.config import Settings, get_settings
+from app.store import engine as store_engine
+from app.store.engine import get_session
+from app.store.models import Base
 
 
 def test_password_hash_round_trip() -> None:
@@ -44,12 +53,6 @@ def test_jwt_rejects_wrong_secret() -> None:
 def test_register_rejects_invalid_input() -> None:
     """Register validates at the edge (422) before the DB is touched — a bad body never reaches the
     store. Validation runs before the endpoint, so no session is needed (get_session is stubbed)."""
-    from collections.abc import AsyncIterator
-
-    from fastapi.testclient import TestClient
-
-    from app.api import app
-    from app.store.engine import get_session
 
     async def _no_session() -> AsyncIterator[None]:
         yield None  # never used — a 422 short-circuits before the endpoint body runs
@@ -69,16 +72,6 @@ def test_register_rejects_invalid_input() -> None:
 
 @pytest.mark.integration
 def test_register_login_me_flow() -> None:
-
-    import httpx
-    from sqlalchemy.exc import InterfaceError, OperationalError
-    from sqlalchemy.ext.asyncio import create_async_engine
-
-    from app.api import app
-    from app.config import get_settings
-    from app.store import engine as store_engine
-    from app.store.models import Base
-
     url = get_settings().app_database_url
     email = f"user-{uuid.uuid4()}@example.com"
 
