@@ -24,8 +24,22 @@ _BASE_TABLES_SQL = """
     SELECT table_name
     FROM information_schema.tables
     WHERE table_schema = %s AND table_type = 'BASE TABLE'
-      AND table_name <> 'flyway_schema_history'   -- Flyway's bookkeeping table, not business data
 """
+
+# The business tables the assistant exposes (mirrors the seed in mock-db/migration/). A real DB may
+# also hold audit / framework / legacy tables (`*_audit`, `alembic_version`, `user`, older tables);
+# introspection ignores anything outside this set so the LLM only ever sees the modelled schema.
+BUSINESS_TABLES: frozenset[str] = frozenset(
+    {
+        "driver",
+        "route",
+        "product",
+        "shipment",
+        "shipment_expense",
+        "shipment_payroll",
+        "driver_payroll",
+    }
+)
 
 _FK_SQL = """
     SELECT table_name, column_name, referenced_table_name, referenced_column_name
@@ -51,7 +65,7 @@ def introspect(conn: Any, schema_name: str) -> SchemaInfo:
 
     with conn.cursor() as cur:
         cur.execute(_BASE_TABLES_SQL, (schema_name,))
-        base_tables = {row[0] for row in cur.fetchall()}
+        base_tables = {row[0] for row in cur.fetchall() if row[0] in BUSINESS_TABLES}
 
     fks_by_table: dict[str, list[ForeignKey]] = {}
     with conn.cursor() as cur:
