@@ -48,6 +48,8 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+      flyway:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
     healthcheck:
@@ -62,11 +64,8 @@ services:
     image: mysql:8.4
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env}
-      MYSQL_DATABASE: dyrtransportes
-      DB_USER: ${DB_USER:-llm_readonly}      # read by db/init/03_grant_readonly.sh
-      DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+      MYSQL_DATABASE: dyrtransportes   # empty schema on first boot; Flyway fills it (see flyway service)
     volumes:
-      - ../db/init:/docker-entrypoint-initdb.d:ro
       - mysqldata:/var/lib/mysql
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
@@ -75,6 +74,26 @@ services:
       retries: 10
       start_period: 30s
     restart: unless-stopped
+
+  # One-shot mock-DB migrator (decision 0011): applies mock-db/migration/V*.sql once MySQL is healthy,
+  # then exits. Idempotent via Flyway's schema-history table, so it's a no-op on subsequent boots (the
+  # mysqldata volume persists the schema). `restart: "no"` — it must run to completion, not be restarted.
+  flyway:
+    image: flyway/flyway:11
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      FLYWAY_URL: jdbc:mysql://mysql:3306/dyrtransportes?allowPublicKeyRetrieval=true&useSSL=false
+      FLYWAY_USER: root
+      FLYWAY_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env}
+      FLYWAY_LOCATIONS: filesystem:/flyway/sql
+      FLYWAY_CONNECT_RETRIES: "60"
+      FLYWAY_PLACEHOLDERS_DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+    command: migrate
+    volumes:
+      - ../mock-db/migration:/flyway/sql:ro
+    restart: "no"
 
   postgres:
     image: postgres:17

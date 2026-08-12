@@ -2,8 +2,9 @@
 # Secrets come from a local .env (copy .env.example → .env); nothing sensitive is hardcoded here.
 # This file lives under docker/; run it from the repo root so the root .env is picked up:
 #   docker compose -f docker/docker-compose.yml up          (or set COMPOSE_FILE in .env)
-# It auto-applies db/init/* (schema + seed + read-only grant), then starts the app once MySQL is
-# healthy. No LLM API key needed (mock mode). Build context is the repo root (..), not docker/.
+# A one-shot Flyway service migrates the mock DB (mock-db/migration/* — schema + seed + read-only grant;
+# decision 0011) once MySQL is healthy, then the app starts. No LLM API key needed (mock mode). Build
+# context is the repo root (..), not docker/.
 #
 # Pin the project name so container/volume names stay `text-to-sql-rag_*` regardless of the compose
 # file's folder (otherwise compose would derive the name from this docker/ directory).
@@ -27,6 +28,8 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+      flyway:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
     healthcheck:
@@ -40,19 +43,35 @@ services:
     image: mysql:8.4
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env (copy .env.example)}
-      MYSQL_DATABASE: dyrtransportes
-      DB_USER: ${DB_USER:-llm_readonly}      # read by db/init/03_grant_readonly.sh
-      DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env (copy .env.example)}
+      MYSQL_DATABASE: dyrtransportes   # empty schema on first boot; Flyway fills it (see flyway service)
     ports:
       - "3306:3306"
-    volumes:
-      - ../db/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 30s
+
+  # One-shot mock-DB migrator (decision 0011): applies mock-db/migration/V*.sql (schema + seed +
+  # read-only grant) once MySQL is healthy, then exits. Idempotent — Flyway's schema-history table skips
+  # already-applied versions, so re-running (or a restart with a persisted volume) is a no-op.
+  flyway:
+    image: flyway/flyway:11
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      FLYWAY_URL: jdbc:mysql://mysql:3306/dyrtransportes?allowPublicKeyRetrieval=true&useSSL=false
+      FLYWAY_USER: root
+      FLYWAY_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env (copy .env.example)}
+      FLYWAY_LOCATIONS: filesystem:/flyway/sql
+      FLYWAY_CONNECT_RETRIES: "60"     # wait out MySQL's first-boot init before the first connect
+      # Injected into V3__readonly_user.sql as ${db_password} — keeps the credential out of the SQL file.
+      FLYWAY_PLACEHOLDERS_DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env (copy .env.example)}
+    command: migrate
+    volumes:
+      - ../mock-db/migration:/flyway/sql:ro
 
   # App datastore (decision 0008): users / conversations / messages / feedback. Alembic migrates it.
   postgres:

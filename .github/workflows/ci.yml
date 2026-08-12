@@ -104,13 +104,15 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Apply schema + seed + read-only grant (same scripts as docker compose)
-        env:
-          MYSQL_HOST: 127.0.0.1
+      - name: Apply mock-db migrations (Flyway — same migrations as docker compose)
         run: |
-          mysql -h 127.0.0.1 -u root -p"$MYSQL_ROOT_PASSWORD" < db/init/01_schema.sql
-          mysql -h 127.0.0.1 -u root -p"$MYSQL_ROOT_PASSWORD" < db/init/02_seed.sql
-          bash db/init/03_grant_readonly.sh
+          docker run --rm --network host \
+            -v "$PWD/mock-db/migration:/flyway/sql:ro" \
+            flyway/flyway:11 \
+            -url="jdbc:mysql://127.0.0.1:3306/dyrtransportes?allowPublicKeyRetrieval=true&useSSL=false" \
+            -user=root -password="$MYSQL_ROOT_PASSWORD" \
+            -placeholders.db_password="$DB_PASSWORD" \
+            -connectRetries=60 -locations=filesystem:/flyway/sql migrate
 
       - name: Install uv
         uses: astral-sh/setup-uv@v9.0.0
@@ -168,13 +170,15 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Apply schema + seed + read-only grant
-        env:
-          MYSQL_HOST: 127.0.0.1 # 03_grant_readonly.sh defaults to the socket; force TCP to the service
+      - name: Apply mock-db migrations (Flyway)
         run: |
-          mysql -h 127.0.0.1 -u root -p"$MYSQL_ROOT_PASSWORD" < db/init/01_schema.sql
-          mysql -h 127.0.0.1 -u root -p"$MYSQL_ROOT_PASSWORD" < db/init/02_seed.sql
-          bash db/init/03_grant_readonly.sh
+          docker run --rm --network host \
+            -v "$PWD/mock-db/migration:/flyway/sql:ro" \
+            flyway/flyway:11 \
+            -url="jdbc:mysql://127.0.0.1:3306/dyrtransportes?allowPublicKeyRetrieval=true&useSSL=false" \
+            -user=root -password="$MYSQL_ROOT_PASSWORD" \
+            -placeholders.db_password="$DB_PASSWORD" \
+            -connectRetries=60 -locations=filesystem:/flyway/sql migrate
 
       - name: Install uv
         uses: astral-sh/setup-uv@v9.0.0

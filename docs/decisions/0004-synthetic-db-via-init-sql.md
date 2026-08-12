@@ -1,7 +1,13 @@
 ---
-status: accepted
+status: superseded
+superseded_by: 0011
 date: 2026-08-10
 ---
+
+> **Superseded by [0011](0011-flyway-mock-db-migrations.md)** (2026-08-12): the *mechanism* changed from
+> MySQL init-SQL scripts to Flyway versioned migrations under `mock-db/migration/`. The rest of this
+> record — synthetic data, business tables only, "don't point at the real DB" — still holds. Body kept
+> immutable below.
 
 # 0004 — Materialize a synthetic demo DB via MySQL init SQL (not Alembic), scoped to the business tables
 

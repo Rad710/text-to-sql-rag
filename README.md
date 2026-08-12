@@ -51,8 +51,8 @@ docker compose -f docker/docker-compose.prod.yml up -d --build
 Run the databases in Docker and the API + frontend as dev servers — all reading the same `.env`:
 
 ```bash
-docker compose -f docker/docker-compose.yml up -d mysql postgres   # query DB (:3306) + app store (:5432)
-uv run alembic upgrade head              # create the app-store schema
+docker compose -f docker/docker-compose.yml up -d mysql postgres flyway   # DBs (:3306/:5432); Flyway seeds the mock schema
+uv run alembic upgrade head              # create the app-store schema (Postgres)
 uv run uvicorn app.api:app --reload      # API on :8000 (mock LLM by default)
 cd frontend && pnpm install && pnpm dev  # UI on :5173 (proxies to the API)
 ```

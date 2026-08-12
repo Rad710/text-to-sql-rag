@@ -65,8 +65,9 @@ echo "$GHCR_TOKEN" | docker login ghcr.io -u rad710 --password-stdin
 No published images yet (or want to build on the box)? Build from source instead — the compose file keeps a
 `build:` fallback: `docker compose -f docker/docker-compose.prod.yml up -d --build`.
 
-First boot: MySQL applies `db/init/*` (schema + synthetic seed + read-only grant), Postgres starts, the
-app runs `alembic upgrade head`, then nginx comes up. Watch progress with:
+First boot: MySQL starts, the one-shot **Flyway** service applies `mock-db/migration/*` (schema +
+synthetic seed + read-only grant) and exits, Postgres starts, the app runs `alembic upgrade head`, then
+nginx comes up. Watch progress with:
 
 ```bash
 docker compose -f docker/docker-compose.prod.yml ps
@@ -120,7 +121,7 @@ docker compose -f docker/docker-compose.prod.yml exec postgres pg_dump -U app dy
 ```
 
 Data lives in the named volumes `pgdata` (app store) and `mysqldata` (synthetic DB — reproducible from
-`db/init`, so not critical to back up).
+`mock-db/migration`, so not critical to back up).
 
 ## 7. SQL MCP server (optional)
 

@@ -54,6 +54,7 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 | [0031](0031-docker-folder/) | **Docker folder** — move all six Docker files (`Dockerfile`, both `docker-compose*.yml`, `docker-entrypoint.sh`, frontend image + `nginx.conf`) into `docker/`; repo-root build context; pinned project name; docs use `-f docker/…`. Behavior unchanged | done | 0014 |
 | [0032](0032-ghcr-images/) | **GHCR images** — a `release.yml` workflow builds + pushes the `app`/`web` images to `ghcr.io/rad710/text-to-sql-rag/*` on a `v*` tag; prod compose pulls them (`image:` + `${IMAGE_TAG}`), keeping a `build:` fallback | done | 0014, 0031 |
 | [0033](0033-config-package/) | **`app/config/` package** — group `config.py` + `ratelimit.py` into a sub-package with a re-exporting `__init__`; imports unchanged. First step of the repo reorg (plan 0033–0035) | done | — |
+| [0034](0034-mock-db-flyway/) | **`mock-db/` + Flyway** — rename `db/` → `mock-db/`; replace the init-SQL + shell grant with Flyway versioned migrations (`V1/V2/V3`) run as a one-shot compose service + in CI ([decision 0011](../decisions/0011-flyway-mock-db-migrations.md), supersedes 0004) | done | — |
 
 ## Backlog — open, unscheduled
 
@@ -64,6 +65,14 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 
 ## Done
 
+- [0034](0034-mock-db-flyway/) — **`mock-db/` + Flyway**: renamed `db/` → `mock-db/` (the folder only ever
+  stood up a *mock* of the DYR schema — the real one lives in a separate prod project and the app
+  introspects it live). Replaced the `db/init/*` first-boot scripts + `03_grant_readonly.sh` with **Flyway**
+  versioned migrations `mock-db/migration/{V1__schema,V2__seed,V3__readonly_user}.sql` (grant password via a
+  `${db_password}` placeholder). A one-shot `flyway/flyway:11` compose service migrates once MySQL is healthy
+  (app waits on `service_completed_successfully`); CI runs the same migrations via `docker run`. Decision
+  **0011** (supersedes 0004). Smoke-tested against a throwaway MySQL: V1–V3 apply, 7 tables + seed, and
+  `llm_readonly` can SELECT but is denied DDL (ERROR 1142).
 - [0033](0033-config-package/) — **`app/config/` package**: grouped the two loose cross-cutting modules
   (`app/config.py` settings + `app/ratelimit.py` limiter) into an `app/config/` sub-package
   (`config.py` + `ratelimit.py` + a re-exporting `__init__.py`) so `from app.config import …` keeps working
