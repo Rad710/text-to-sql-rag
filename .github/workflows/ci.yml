@@ -169,6 +169,8 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Apply schema + seed + read-only grant
+        env:
+          MYSQL_HOST: 127.0.0.1 # 03_grant_readonly.sh defaults to the socket; force TCP to the service
         run: |
           mysql -h 127.0.0.1 -u root -p"$MYSQL_ROOT_PASSWORD" < db/init/01_schema.sql
           mysql -h 127.0.0.1 -u root -p"$MYSQL_ROOT_PASSWORD" < db/init/02_seed.sql
