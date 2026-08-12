@@ -46,9 +46,24 @@ For a **live** (real-LLM) deploy, also set `DEPLOY_MODE=live`, `LLM_MODE=openai`
 
 ## 2. Bring it up
 
+The `app` and `web` images are pre-built by the **release workflow** (`.github/workflows/release.yml`) and
+published to GHCR (`ghcr.io/rad710/text-to-sql-rag/{app,web}`). The VM just pulls them — no source build:
+
 ```bash
-docker compose -f docker/docker-compose.prod.yml up -d --build
+docker compose -f docker/docker-compose.prod.yml pull      # fetch app + web from GHCR
+docker compose -f docker/docker-compose.prod.yml up -d
 ```
+
+Pin a specific release with `IMAGE_TAG=v1.2.3` in `.env` (defaults to `latest`). GHCR packages start
+**private**; to pull them either make the two packages public (repo → Packages → each → Package settings →
+Change visibility → Public) or authenticate on the VM first with a token that has `read:packages`:
+
+```bash
+echo "$GHCR_TOKEN" | docker login ghcr.io -u rad710 --password-stdin
+```
+
+No published images yet (or want to build on the box)? Build from source instead — the compose file keeps a
+`build:` fallback: `docker compose -f docker/docker-compose.prod.yml up -d --build`.
 
 First boot: MySQL applies `db/init/*` (schema + synthetic seed + read-only grant), Postgres starts, the
 app runs `alembic upgrade head`, then nginx comes up. Watch progress with:
@@ -94,7 +109,8 @@ and decisions [0010](docs/decisions/0010-rate-limiting-deploy-modes.md) / [0015]
 ## 6. Update / teardown / backup
 
 ```bash
-git pull && docker compose -f docker/docker-compose.prod.yml up -d --build   # deploy a new version
+docker compose -f docker/docker-compose.prod.yml pull && \
+  docker compose -f docker/docker-compose.prod.yml up -d              # deploy the latest published images
 docker compose -f docker/docker-compose.prod.yml logs -f                     # tail logs
 docker compose -f docker/docker-compose.prod.yml down                        # stop (keeps volumes)
 docker compose -f docker/docker-compose.prod.yml down -v                     # stop + DROP data volumes

@@ -52,6 +52,7 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 | [0029](0029-honest-mode-header/) | **Honest mode header** — `/health` surfaces the real LLM/deploy mode; header shows it (not hardcoded "mock"); `conftest` forces mock so tests ignore a local `.env` | done | 0015 |
 | [0030](0030-frontend-restructure/) | **Frontend restructure** — conventional layered layout (`pages/ components/ hooks/ context/ api/ lib/ tests/`) + react-router (`/login` + guarded `/`) + `AuthProvider`; anonymous IIFE removed; 4-space formatting. Behavior unchanged | done | 0010 |
 | [0031](0031-docker-folder/) | **Docker folder** — move all six Docker files (`Dockerfile`, both `docker-compose*.yml`, `docker-entrypoint.sh`, frontend image + `nginx.conf`) into `docker/`; repo-root build context; pinned project name; docs use `-f docker/…`. Behavior unchanged | done | 0014 |
+| [0032](0032-ghcr-images/) | **GHCR images** — a `release.yml` workflow builds + pushes the `app`/`web` images to `ghcr.io/rad710/text-to-sql-rag/*` on a `v*` tag; prod compose pulls them (`image:` + `${IMAGE_TAG}`), keeping a `build:` fallback | done | 0014, 0031 |
 
 ## Backlog — open, unscheduled
 
@@ -62,6 +63,14 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 
 ## Done
 
+- [0032](0032-ghcr-images/) — **GHCR images**: prod no longer builds on the VM. A new
+  `.github/workflows/release.yml` (matrix over `app`/`web`) builds both images from the repo-root context
+  and pushes them to `ghcr.io/rad710/text-to-sql-rag/{app,web}` on a `v*` tag (or manual dispatch), authed
+  with the built-in `GITHUB_TOKEN` — tags = semver + `v*` ref + short SHA + `latest`.
+  `docker/docker-compose.prod.yml` now pulls them (`image: …:${IMAGE_TAG:-latest}`) with a `build:`
+  fallback kept for clone-and-run; both images carry an `org.opencontainers.image.source` label. DEPLOY.md
+  + README describe the `pull → up -d` flow (+ GHCR visibility/login, `IMAGE_TAG` pin). Verified: workflow
+  YAML valid, prod compose resolves to the GHCR refs. Owner does the first tag push + package-visibility.
 - [0031](0031-docker-folder/) — **docker folder**: the repo root had six loose Docker files (backend
   `Dockerfile`, `docker-compose.yml`, `docker-compose.prod.yml`, `docker-entrypoint.sh`, plus
   `frontend/Dockerfile` + `frontend/nginx.conf`). Collected all of them under `docker/` (moves via

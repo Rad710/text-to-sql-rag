@@ -25,6 +25,8 @@ RUN pnpm build
 
 # --- serve stage ---------------------------------------------------------------------------
 FROM nginx:alpine AS serve
+# Link the GHCR package to the repo (see .github/workflows/release.yml).
+LABEL org.opencontainers.image.source="https://github.com/Rad710/text-to-sql-rag"
 # Static SPA bundle.
 COPY --from=build /app/dist /usr/share/nginx/html
 # Our server config (SPA fallback + SSE-safe API proxy).

@@ -14,6 +14,9 @@
 name: text-to-sql-rag
 services:
   web:
+    # Pull the pre-built image from GHCR (published by .github/workflows/release.yml). `build:` is kept as
+    # a from-source fallback: `docker compose … pull` uses the registry image; `… up --build` builds locally.
+    image: ghcr.io/rad710/text-to-sql-rag/web:${IMAGE_TAG:-latest}
     build:
       context: ..
       dockerfile: docker/frontend.Dockerfile
@@ -25,6 +28,7 @@ services:
     restart: unless-stopped
 
   app:
+    image: ghcr.io/rad710/text-to-sql-rag/app:${IMAGE_TAG:-latest}
     build:
       context: ..
       dockerfile: docker/Dockerfile

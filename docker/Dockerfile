@@ -1,6 +1,9 @@
 # syntax=docker/dockerfile:1
 FROM python:3.12-slim
 
+# Link the GHCR package to the repo (see .github/workflows/release.yml).
+LABEL org.opencontainers.image.source="https://github.com/Rad710/text-to-sql-rag"
+
 # uv for fast, reproducible installs.
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 

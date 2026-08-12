@@ -139,13 +139,19 @@ A production `docker-compose` runs the whole stack behind **nginx** (serves the 
 the API — one origin, no CORS): FastAPI (mock mode + Alembic migrations on boot), the synthetic MySQL
 query DB, and the Postgres app store.
 
+The `app` + `web` images are built and pushed to **GHCR** by the release workflow
+(`.github/workflows/release.yml`, on a `v*` tag); the deploy just pulls them:
+
 ```bash
 cp .env.example .env   # set the change-me secrets (a real JWT_SECRET), then:
-docker compose -f docker/docker-compose.prod.yml up -d --build
+docker compose -f docker/docker-compose.prod.yml pull
+docker compose -f docker/docker-compose.prod.yml up -d
 # → the app is served on http://localhost (nginx); API is internal-only
 ```
 
-Full runbook — the `.env` template, TLS, and the demo↔live switch — is in [`DEPLOY.md`](DEPLOY.md).
+(No published images yet? The compose file keeps a `build:` fallback — add `--build` to build from source.)
+Full runbook — GHCR visibility/auth, the `.env` template, TLS, and the demo↔live switch — is in
+[`DEPLOY.md`](DEPLOY.md).
 
 ## SQL safety
 
