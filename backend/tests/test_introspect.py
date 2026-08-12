@@ -48,12 +48,12 @@ def conn() -> Iterator[Any]:
 
 
 def test_introspect_finds_all_business_tables(conn: Any) -> None:
-    schema = introspect(conn, get_settings().db_name)
+    schema = introspect(conn, get_settings().query_db_name)
     assert {t.name for t in schema.tables} == EXPECTED_TABLES
 
 
 def test_shipment_foreign_keys_and_joins(conn: Any) -> None:
-    schema = introspect(conn, get_settings().db_name)
+    schema = introspect(conn, get_settings().query_db_name)
     shipment = schema.table("shipment")
     assert shipment is not None
     assert {fk.ref_table for fk in shipment.foreign_keys} == SHIPMENT_FK_TARGETS
@@ -64,7 +64,7 @@ def test_shipment_foreign_keys_and_joins(conn: Any) -> None:
 
 
 def test_rendered_ddl_covers_schema(conn: Any) -> None:
-    schema = introspect(conn, get_settings().db_name)
+    schema = introspect(conn, get_settings().query_db_name)
     ddl = render_schema_ddl(schema)
     for table in EXPECTED_TABLES:
         assert f"CREATE TABLE {table} (" in ddl

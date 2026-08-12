@@ -69,17 +69,17 @@ def test_register_rejects_invalid_input() -> None:
 
 @pytest.mark.integration
 def test_register_login_me_flow() -> None:
-    import os
 
     import httpx
     from sqlalchemy.exc import InterfaceError, OperationalError
     from sqlalchemy.ext.asyncio import create_async_engine
 
     from app.api import app
+    from app.config import get_settings
     from app.store import engine as store_engine
     from app.store.models import Base
 
-    url = os.environ.get("APP_DATABASE_URL", "postgresql+asyncpg://app:app@localhost:5432/dyr_app")
+    url = get_settings().app_database_url
     email = f"user-{uuid.uuid4()}@example.com"
 
     async def flow() -> None:

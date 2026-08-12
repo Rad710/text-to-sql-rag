@@ -58,7 +58,7 @@ def test_all_business_tables_exist(conn: pymysql.connections.Connection) -> None
     with conn.cursor() as cur:
         cur.execute(
             "SELECT table_name FROM information_schema.tables WHERE table_schema = %s",
-            (get_settings().db_name,),
+            (get_settings().query_db_name,),
         )
         tables = {r[0] for r in cur.fetchall()}
     assert tables >= EXPECTED_TABLES

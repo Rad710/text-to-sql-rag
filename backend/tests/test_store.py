@@ -7,7 +7,6 @@ Postgres (``APP_DATABASE_URL``), like the MySQL integration suite.
 from __future__ import annotations
 
 import asyncio
-import os
 
 import pytest
 
@@ -48,7 +47,9 @@ def test_store_round_trip() -> None:
     from sqlalchemy.exc import InterfaceError, OperationalError
     from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-    url = os.environ.get("APP_DATABASE_URL", "postgresql+asyncpg://app:app@localhost:5432/dyr_app")
+    from app.config import get_settings
+
+    url = get_settings().app_database_url
 
     async def run() -> None:
         engine = create_async_engine(url)

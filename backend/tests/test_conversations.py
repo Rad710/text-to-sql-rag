@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import os
 import tempfile
 import uuid
 
@@ -32,8 +31,9 @@ def test_chat_persists_and_history_is_isolated_per_user() -> None:
 
     import app.store.engine as store_engine
     from app.api import app, get_service
+    from app.config import get_settings
 
-    url = os.environ.get("APP_DATABASE_URL", "postgresql+asyncpg://app:app@localhost:5432/dyr_app")
+    url = get_settings().app_database_url
     schema = _schema()
     store = RagStore(path=tempfile.mkdtemp(), embedder=OfflineEmbedder())
     store.sync_corpus(build_corpus(schema))

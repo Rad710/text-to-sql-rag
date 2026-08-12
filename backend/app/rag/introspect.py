@@ -24,6 +24,7 @@ _BASE_TABLES_SQL = """
     SELECT table_name
     FROM information_schema.tables
     WHERE table_schema = %s AND table_type = 'BASE TABLE'
+      AND table_name <> 'flyway_schema_history'   -- Flyway's bookkeeping table, not business data
 """
 
 _FK_SQL = """
