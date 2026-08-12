@@ -152,8 +152,53 @@ class MockProvider:
         return LlmResponse(content=content, tool_calls=tool_calls, usage=usage)
 
 
+# --- Markdown tool protocol (used by OpenAIProvider) -------------------------------------------
+# Local models are far more reliable emitting a fenced code block than JSON function-call args, so
+# we drive the loop as a plain-text transcript: the model replies with one ```sql / ```schema block
+# (or prose = final answer), and we translate to/from the agent loop's function-call shape here.
+_FENCE_RE = re.compile(r"```([A-Za-z_]*)[^\n]*\n(.*?)```", re.DOTALL)
+
+
+def _parse_action(content: str) -> tuple[list[ToolCall], str | None]:
+    """A fenced `sql`/`schema` block → the matching ToolCall; otherwise the text is the answer."""
+    match = _FENCE_RE.search(content or "")
+    if match:
+        lang, body = match.group(1).lower(), match.group(2).strip()
+        if lang == "sql" or (not lang and re.match(r"(?is)\s*(select|with)\b", body)):
+            return [ToolCall("call_run", "run_sql", {"query": body})], None
+        if lang in ("schema", "search", "search_schema"):
+            return [ToolCall("call_search", "search_schema", {"question": body})], None
+    return [], (content or None)
+
+
+def _render_history_as_text(messages: list[dict[str, Any]]) -> list[dict[str, str]]:
+    """Rewrite the function-call messages as a plain transcript: past tool calls become the fenced
+    blocks the model would have written; tool results come back as a `Result:` user turn."""
+    out: list[dict[str, str]] = []
+    for message in messages:
+        role = str(message.get("role"))
+        if role == "assistant" and message.get("tool_calls"):
+            blocks: list[str] = []
+            for call in message["tool_calls"]:
+                fn = call.get("function", {})
+                try:
+                    args = json.loads(fn.get("arguments") or "{}")
+                except json.JSONDecodeError:
+                    args = {}
+                if fn.get("name") == "run_sql":
+                    blocks.append(f"```sql\n{args.get('query') or args.get('sql') or ''}\n```")
+                elif fn.get("name") == "search_schema":
+                    blocks.append(f"```schema\n{args.get('question') or ''}\n```")
+            out.append({"role": "assistant", "content": "\n".join(blocks)})
+        elif role == "tool":
+            out.append({"role": "user", "content": f"Result:\n{message.get('content') or ''}"})
+        else:
+            out.append({"role": role, "content": str(message.get("content") or "")})
+    return out
+
+
 class OpenAIProvider:
-    """Talks to any OpenAI-compatible chat-completions endpoint (lazy import)."""
+    """Any OpenAI-compatible endpoint, driven with the markdown tool protocol (no JSON calls)."""
 
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
@@ -171,27 +216,18 @@ class OpenAIProvider:
     def complete(
         self, messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = None
     ) -> LlmResponse:
-        create_args: dict[str, Any] = {"model": self._settings.llm_model, "messages": messages}
-        if tools:
-            create_args["tools"] = tools
-            create_args["tool_choice"] = "auto"
-
-        response = self._get_client().chat.completions.create(**create_args)
+        # `tools` unused: we prompt a fenced-block protocol instead of JSON function-calling.
+        response = self._get_client().chat.completions.create(
+            model=self._settings.llm_model, messages=_render_history_as_text(messages)
+        )
         message = response.choices[0].message
-
-        tool_calls: list[ToolCall] = []
-        for call in message.tool_calls or []:
-            try:
-                arguments = json.loads(call.function.arguments or "{}")
-            except json.JSONDecodeError:
-                arguments = {}
-            tool_calls.append(ToolCall(id=call.id, name=call.function.name, arguments=arguments))
+        tool_calls, content = _parse_action(message.content or "")
 
         usage = response.usage
         prompt_tokens = getattr(usage, "prompt_tokens", 0) or 0
         completion_tokens = getattr(usage, "completion_tokens", 0) or 0
         return LlmResponse(
-            content=message.content,
+            content=content,
             tool_calls=tool_calls,
             usage=Usage(
                 prompt_tokens,

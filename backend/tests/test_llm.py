@@ -16,6 +16,7 @@ from app.llm.client import (
     Usage,
     _detect_lang,
     _estimate_cost,
+    _render_history_as_text,
     get_llm,
 )
 from app.llm.prompts import SYSTEM_PROMPT, TOOLS
@@ -149,10 +150,10 @@ class _FakeClient:
         self.chat = type("Chat", (), {"completions": completions})
 
 
-def test_openai_provider_parses_tool_calls_and_cost() -> None:
+def test_openai_provider_parses_sql_block_and_cost() -> None:
     settings = Settings(llm_mode="openai", llm_price_input_per_1m=1.0, llm_price_output_per_1m=2.0)
     provider = OpenAIProvider(settings)
-    fake = _FakeClient(_fake_response(None, [("id1", "run_sql", '{"query": "SELECT 1"}')], 100, 50))
+    fake = _FakeClient(_fake_response("```sql\nSELECT 1\n```", [], 100, 50))
     provider._client = fake  # inject the fake client
 
     resp = provider.complete([{"role": "user", "content": "x"}], TOOLS)
@@ -161,10 +162,38 @@ def test_openai_provider_parses_tool_calls_and_cost() -> None:
     assert resp.tool_calls[0].arguments == {"query": "SELECT 1"}
     assert resp.usage.prompt_tokens == 100 and resp.usage.completion_tokens == 50
     assert resp.usage.cost_usd == 100 / 1_000_000 * 1.0 + 50 / 1_000_000 * 2.0
-    # tools + the configured model were passed through to the API call
-    assert fake.captured["tools"] == TOOLS
-    assert fake.captured["tool_choice"] == "auto"
+    # markdown protocol: no JSON tools/tool_choice sent — just model + the rendered transcript
+    assert "tools" not in fake.captured and "tool_choice" not in fake.captured
     assert fake.captured["model"] == "gpt-4o-mini"
+
+
+def test_openai_provider_parses_schema_block() -> None:
+    provider = OpenAIProvider(Settings(llm_mode="openai"))
+    provider._client = _FakeClient(_fake_response("```schema\nrevenue per route\n```", [], 5, 5))
+    resp = provider.complete([{"role": "user", "content": "x"}], TOOLS)
+    assert [tc.name for tc in resp.tool_calls] == ["search_schema"]
+    assert resp.tool_calls[0].arguments == {"question": "revenue per route"}
+
+
+def test_history_rendered_as_markdown_transcript() -> None:
+    messages = [
+        {"role": "user", "content": "q"},
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": "a",
+                    "type": "function",
+                    "function": {"name": "run_sql", "arguments": '{"query": "SELECT 1"}'},
+                }
+            ],
+        },
+        {"role": "tool", "tool_call_id": "a", "content": "n\n1"},
+    ]
+    rendered = _render_history_as_text(messages)
+    assert rendered[1] == {"role": "assistant", "content": "```sql\nSELECT 1\n```"}
+    assert rendered[2] == {"role": "user", "content": "Result:\nn\n1"}
 
 
 def test_openai_provider_parses_plain_content() -> None:
