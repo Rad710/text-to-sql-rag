@@ -5,20 +5,20 @@ let currentId: string | null = null;
 let listener: ((id: string) => void) | null = null;
 
 export function getConversationId(): string | null {
-  return currentId;
+    return currentId;
 }
 
 export function setConversationId(id: string | null): void {
-  currentId = id;
+    currentId = id;
 }
 
 /** Register a callback fired when a turn (re)identifies its conversation — App uses it to refresh. */
 export function onConversationStarted(cb: ((id: string) => void) | null): void {
-  listener = cb;
+    listener = cb;
 }
 
 /** Called by the adapter when /chat emits its `conversation` event. */
 export function notifyConversation(id: string): void {
-  currentId = id;
-  listener?.(id);
+    currentId = id;
+    listener?.(id);
 }

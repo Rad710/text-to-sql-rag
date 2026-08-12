@@ -7,18 +7,18 @@ import { defineConfig } from "vitest/config";
 // 0.11.58 `_getInitializePromise` throw under React 19) fails the test, which `tsc`/`vite
 // build` never caught. See docs/tasks/0010-react-frontend/.
 export default defineConfig({
-  plugins: [react()],
-  resolve: {
-    alias: {
-      "@": path.resolve(import.meta.dirname, "./src"),
+    plugins: [react()],
+    resolve: {
+        alias: {
+            "@": path.resolve(import.meta.dirname, "./src"),
+        },
     },
-  },
-  test: {
-    // Only the src unit/component tests — the Playwright e2e specs live in e2e/ and run via `pnpm e2e`.
-    include: ["src/**/*.test.{ts,tsx}"],
-    environment: "jsdom",
-    globals: true,
-    setupFiles: ["./src/test/setup.ts"],
-    css: false,
-  },
+    test: {
+        // Unit/component tests live under src/tests/; the Playwright e2e specs are in e2e/ (`pnpm e2e`).
+        include: ["src/tests/**/*.test.{ts,tsx}"],
+        environment: "jsdom",
+        globals: true,
+        setupFiles: ["./src/tests/setup.ts"],
+        css: false,
+    },
 });

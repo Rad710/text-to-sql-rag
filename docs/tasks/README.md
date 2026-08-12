@@ -50,6 +50,7 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 | [0027](0027-feedback-highlight/) | **Highlight selected 👍/👎** — style the `data-submitted` state so the chosen rating is filled/primary | done | 0020 |
 | [0028](0028-polish-fixes/) | **Polish fixes** — remove double-persisting regenerate, graceful logout on mid-session 401, grouped/right-aligned number formatting in result tables | done | 0019, 0020 |
 | [0029](0029-honest-mode-header/) | **Honest mode header** — `/health` surfaces the real LLM/deploy mode; header shows it (not hardcoded "mock"); `conftest` forces mock so tests ignore a local `.env` | done | 0015 |
+| [0030](0030-frontend-restructure/) | **Frontend restructure** — conventional layered layout (`pages/ components/ hooks/ context/ api/ lib/ tests/`) + react-router (`/login` + guarded `/`) + `AuthProvider`; anonymous IIFE removed; 4-space formatting. Behavior unchanged | done | 0010 |
 
 ## Backlog — open, unscheduled
 
@@ -60,6 +61,14 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 
 ## Done
 
+- [0030](0030-frontend-restructure/) — **frontend restructure**: reorganized the React app from a flat
+  `src/` + one components folder + co-located tests + a 200-line `App.tsx` with an anonymous
+  `void (async()=>{})()` IIFE into a **conventional layered layout** (`pages/ components/ hooks/ context/
+  api/ lib/ tests/`). Added **react-router** (`/login` + a guarded `/` via `ProtectedRoute`) with auth in
+  an `AuthProvider`/`useAuth` context; the IIFE is gone (named async effects + an `active` cleanup flag,
+  header mode label split into `useServerMode()`); whole frontend reformatted to 4-space. Generated
+  `ui/`+`assistant-ui/` primitives untouched; moves via `git mv` (history preserved). Behavior unchanged;
+  backend untouched. build/lint clean, 22/22 unit tests, routing browser-verified (0 console errors).
 - [0001](0001-project-scaffold/) — FastAPI skeleton + config + ruff/mypy/pytest + CI + Docker; runs in mock
   mode with no key. Gates green locally (8 tests), live-smoke-tested.
 - [0002](0002-synthetic-mysql-db/) — synthetic MySQL DB via init SQL (7 business tables + fake seed +

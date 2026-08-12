@@ -7,20 +7,20 @@ import { getToken } from "./auth";
 let lastAssistantMessageId: string | null = null;
 
 export function setLastAssistantMessageId(id: string | null): void {
-  lastAssistantMessageId = id;
+    lastAssistantMessageId = id;
 }
 
 export function getLastAssistantMessageId(): string | null {
-  return lastAssistantMessageId;
+    return lastAssistantMessageId;
 }
 
 export async function submitFeedback(messageId: string, rating: 1 | -1): Promise<void> {
-  await fetch("/feedback", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${getToken() ?? ""}`,
-    },
-    body: JSON.stringify({ message_id: messageId, rating }),
-  });
+    await fetch("/feedback", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${getToken() ?? ""}`,
+        },
+        body: JSON.stringify({ message_id: messageId, rating }),
+    });
 }

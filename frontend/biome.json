@@ -1,34 +1,34 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.5.8/schema.json",
-  "files": {
-    "ignoreUnknown": true,
-    "includes": [
-      "**",
-      "!**/node_modules",
-      "!dist",
-      "!src/index.css",
-      "!test-results",
-      "!playwright-report",
-      "!blob-report"
+    "$schema": "https://biomejs.dev/schemas/2.5.8/schema.json",
+    "files": {
+        "ignoreUnknown": true,
+        "includes": [
+            "**",
+            "!**/node_modules",
+            "!dist",
+            "!src/index.css",
+            "!test-results",
+            "!playwright-report",
+            "!blob-report"
+        ]
+    },
+    "formatter": {
+        "enabled": true,
+        "indentStyle": "space",
+        "indentWidth": 4,
+        "lineWidth": 100
+    },
+    "javascript": {
+        "formatter": { "quoteStyle": "double" }
+    },
+    "linter": {
+        "enabled": true,
+        "rules": { "preset": "recommended" }
+    },
+    "overrides": [
+        {
+            "includes": ["src/components/ui/**", "src/components/assistant-ui/**"],
+            "linter": { "enabled": false }
+        }
     ]
-  },
-  "formatter": {
-    "enabled": true,
-    "indentStyle": "space",
-    "indentWidth": 2,
-    "lineWidth": 100
-  },
-  "javascript": {
-    "formatter": { "quoteStyle": "double" }
-  },
-  "linter": {
-    "enabled": true,
-    "rules": { "preset": "recommended" }
-  },
-  "overrides": [
-    {
-      "includes": ["src/components/ui/**", "src/components/assistant-ui/**"],
-      "linter": { "enabled": false }
-    }
-  ]
 }
