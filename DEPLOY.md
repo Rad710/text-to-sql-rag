@@ -37,8 +37,8 @@ cp .env.example .env
 Then edit `.env` and set at least these (see the comments in the file for the rest):
 
 - `JWT_SECRET` — a unique **≥32-byte** value: `python -c "import secrets; print(secrets.token_urlsafe(48))"`
-- `MYSQL_ROOT_PASSWORD`, `DB_PASSWORD` — the MySQL admin + read-only-user passwords
-- `APP_DB_PASSWORD` — the Postgres `app` user password (keep it in sync with `APP_DATABASE_URL`)
+- `QUERY_DB_ROOT_PASSWORD`, `QUERY_DB_PASSWORD` — the MySQL admin + read-only-user passwords
+- `APP_DB_PASSWORD` — the Postgres `app` user password
 - keep `LLM_MODE=mock` for the mock demo; set `WEB_PORT=8080` if port 80 is taken
 
 For a **live** (real-LLM) deploy, set `LLM_MODE=openai` with `LLM_BASE_URL` / `LLM_MODEL` /

@@ -1,6 +1,6 @@
 """Alembic migration environment for the app datastore (decision 0008).
 
-The URL comes from ``Settings.app_database_url`` (env ``APP_DATABASE_URL``); the target schema is
+The URL comes from ``Settings.app_database_url`` (assembled from the ``APP_DB_*`` env vars); the target schema is
 ``app.store.models.Base`` — so migrations track the ORM models and share the app's config.
 """
 

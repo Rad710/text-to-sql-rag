@@ -1,7 +1,7 @@
 """Schema + round-trip tests for the app datastore (task 0017).
 
 The metadata tests are pure (no DB); the round-trip is an opt-in ``integration`` test against a live
-Postgres (``APP_DATABASE_URL``), like the MySQL integration suite.
+Postgres (configured via the ``APP_DB_*`` env vars), like the MySQL integration suite.
 """
 
 from __future__ import annotations
