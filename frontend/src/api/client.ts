@@ -4,8 +4,12 @@
 
 import { useSession } from "@/stores/session";
 
-/** Exchange the stored refresh token for a fresh pair. Returns true on success. */
-export async function tryRefresh(): Promise<boolean> {
+// Single-flight: concurrent callers (parallel 401s, a double-invoked StrictMode effect, multiple tabs
+// racing) share ONE in-flight /auth/refresh instead of each rotating the token — which would orphan
+// tokens and could trip server-side reuse detection and spuriously sign the user out.
+let refreshInFlight: Promise<boolean> | null = null;
+
+async function doRefresh(): Promise<boolean> {
     const { refreshToken } = useSession.getState();
     if (!refreshToken) return false;
     const res = await fetch("/auth/refresh", {
@@ -20,6 +24,16 @@ export async function tryRefresh(): Promise<boolean> {
     };
     useSession.getState().setTokens(access_token, refresh_token);
     return true;
+}
+
+/** Exchange the stored refresh token for a fresh pair (deduped). Returns true on success. */
+export function tryRefresh(): Promise<boolean> {
+    if (!refreshInFlight) {
+        refreshInFlight = doRefresh().finally(() => {
+            refreshInFlight = null;
+        });
+    }
+    return refreshInFlight;
 }
 
 /** `fetch` with the Bearer access token attached; refreshes once on a 401, else signs out. */
