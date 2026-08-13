@@ -5,8 +5,9 @@ get an answer, backed by retrieval-augmented schema grounding and safe, read-onl
 **agentic tool-loop** — the model searches the schema (RAG) and runs read-only queries, rerunning and
 refining until it can answer.
 
-> **Status: in active development.** The design and task tracker are complete; implementation is landing
-> task by task. Follow along in [`docs/`](docs/).
+**[Live demo →](https://dyr-ai.rad710.com/login)** — running in mock mode, so you can sign up and try it with no API key or GPU.
+
+![The assistant answering a question — the tools it called, the SQL it wrote, and the result](docs/screenshot.png)
 
 ## What it does
 
@@ -148,8 +149,7 @@ See [`docs/tasks/0011-sql-mcp-server/`](docs/tasks/0011-sql-mcp-server/).
 
 ## Deploy
 
-<!-- Once hosted, put the clickable URL here:  **Live demo:** https://your-domain -->
-_Live demo: not yet hosted — deploy it yourself in a few minutes with the runbook below._
+**Live demo: [dyr-ai.rad710.com](https://dyr-ai.rad710.com/login)** — running in mock mode; sign up and try it. Or deploy your own with the runbook below.
 
 A production `docker-compose` runs the whole stack behind **nginx** (serves the built SPA and proxies
 the API — one origin, no CORS): FastAPI (mock mode + Alembic migrations on boot), the synthetic MySQL
