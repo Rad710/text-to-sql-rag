@@ -70,6 +70,13 @@ def test_chat_persists_and_history_is_isolated_per_user() -> None:
             messages = detail.json()["messages"]
             roles = [m["role"] for m in messages]
             assert "user" in roles and "assistant" in roles and len(roles) >= 2
+            # The assistant turn persists its tool steps so a reload rebuilds the SQL step + table
+            # instead of the prose alone (task 0041). User turns carry no tool_data.
+            assistant = next(m for m in messages if m["role"] == "assistant")
+            assert assistant["tool_data"] and any(
+                s["name"] == "run_sql" for s in assistant["tool_data"]
+            )
+            assert next(m for m in messages if m["role"] == "user")["tool_data"] is None
 
             # feedback on the assistant message (task 0020): upsert, owner-checked, validated
             msg_id = next(m["id"] for m in messages if m["role"] == "assistant")

@@ -8,8 +8,9 @@ from __future__ import annotations
 
 import datetime as dt
 import uuid
+from typing import Any
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, func
+from sqlalchemy import JSON, DateTime, ForeignKey, String, Text, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -74,6 +75,10 @@ class Message(Base):
     )
     role: Mapped[str] = mapped_column(String(20))  # "user" | "assistant"
     content: Mapped[str] = mapped_column(Text)
+    # The assistant turn's tool steps (each `{name, arguments, result}`) so a reloaded conversation
+    # rebuilds the SQL step + result table that only streamed live before (task 0041, decision 6).
+    # Null on user turns and on pre-0041 rows (which render prose-only).
+    tool_data: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON, default=None)
     created_at: Mapped[dt.datetime] = mapped_column(server_default=func.now())
 
     conversation: Mapped[Conversation] = relationship(back_populates="messages")

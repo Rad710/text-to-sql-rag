@@ -2,11 +2,11 @@ import type {
     ChatModelAdapter,
     ThreadAssistantMessagePart,
     ThreadMessage,
-    ToolCallMessagePart,
 } from "@assistant-ui/react";
 
 import { apiFetch } from "@/api/client";
 import i18n from "@/i18n";
+import { type ToolStep, toolCallParts } from "@/lib/tool-parts";
 import { useSession } from "@/stores/session";
 
 /** Join a message's text parts (ignoring tool-call/other parts) into a plain string. */
@@ -118,44 +118,35 @@ export const adapter: ChatModelAdapter = {
             return;
         }
 
-        // Tool-call parts are built as events arrive; `pending` points at the call awaiting its result.
-        const tools: ToolCallMessagePart[] = [];
+        // Tool steps are accumulated as events arrive (same shape we persist, task 0041); `pending`
+        // points at the call awaiting its result. `toolCallParts` renders them — one shared mapping
+        // with the reload path so a live turn and a reloaded one look identical.
+        const steps: ToolStep[] = [];
         let pending = -1;
         let answer = "";
         let usage = "";
 
         for await (const evt of parseSSE(res.body)) {
             if (evt.type === "tool_start") {
-                const name = String(evt.data.name ?? "tool");
-                const args = (evt.data.arguments as Record<string, unknown> | undefined) ?? {};
-                tools.push({
-                    type: "tool-call",
-                    toolCallId: `${name}-${tools.length}`,
-                    toolName: name,
-                    args: args as ToolCallMessagePart["args"],
-                    // Show the meaningful argument as plain text in the collapsible step — the SQL for
-                    // run_sql (models name it `query` or, for some local ones, `sql`), the question for
-                    // search_schema — instead of raw JSON.
-                    argsText: String(
-                        args.query ?? args.sql ?? args.question ?? JSON.stringify(args),
-                    ),
+                steps.push({
+                    name: String(evt.data.name ?? "tool"),
+                    arguments: (evt.data.arguments as Record<string, unknown> | undefined) ?? {},
                 });
-                pending = tools.length - 1;
+                pending = steps.length - 1;
             } else if (evt.type === "tool_result") {
-                const idx = pending >= 0 ? pending : tools.length - 1;
-                if (tools[idx]) {
+                const idx = pending >= 0 ? pending : steps.length - 1;
+                if (steps[idx]) {
                     const d = evt.data;
-                    // run_sql carries structured rows (decision 0006) → the frontend renders the table;
-                    // other tools carry a short text preview.
-                    const result = Array.isArray(d.rows)
+                    // run_sql carries structured rows (decision 0006) → rendered as a table; other tools
+                    // carry a short text preview. Kept backend-native; `toolCallParts` normalizes it.
+                    steps[idx].result = Array.isArray(d.rows)
                         ? {
                               columns: d.columns,
                               rows: d.rows,
-                              rowCount: d.row_count,
+                              row_count: d.row_count,
                               truncated: d.truncated,
                           }
                         : d.preview;
-                    tools[idx] = { ...tools[idx], result };
                 }
                 pending = -1;
             } else if (evt.type === "answer") {
@@ -175,7 +166,7 @@ export const adapter: ChatModelAdapter = {
             }
 
             // Answer and usage are separate parts (no concatenation) — historyText drops the usage one.
-            const content: ThreadAssistantMessagePart[] = [...tools];
+            const content: ThreadAssistantMessagePart[] = [...toolCallParts(steps)];
             if (answer) content.push({ type: "text", text: answer });
             if (usage) content.push({ type: "text", text: usage });
             yield { content };

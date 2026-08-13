@@ -13,6 +13,7 @@ import { ConversationSidebar } from "@/components/ConversationSidebar";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { useServerMode } from "@/hooks/useServerMode";
+import { toolCallParts } from "@/lib/tool-parts";
 import { useSession } from "@/stores/session";
 
 /** / — the authenticated chat app: header + conversation sidebar (drawer on mobile) + the chat pane. */
@@ -63,7 +64,22 @@ export function ChatPage() {
         // The latest answer (the only one showing an action bar) is what feedback targets on reload.
         const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
         setLastAssistantMessageId(lastAssistant?.id ?? null);
-        setInitialMessages(messages.map((m) => ({ role: m.role, content: m.content })));
+        // Rebuild the tool steps (SQL step + result table) that only streamed live before (task 0041);
+        // the same `toolCallParts` the live runtime uses, so a reloaded turn renders identically. A
+        // message without tool_data (user turns, pre-0041 rows) stays a plain string → prose-only.
+        setInitialMessages(
+            messages.map((m) =>
+                m.tool_data?.length
+                    ? {
+                          role: m.role,
+                          content: [
+                              ...toolCallParts(m.tool_data),
+                              ...(m.content ? [{ type: "text" as const, text: m.content }] : []),
+                          ],
+                      }
+                    : { role: m.role, content: m.content },
+            ),
+        );
         setActiveId(id);
         setPaneKey((k) => k + 1);
         setSidebarOpen(false);

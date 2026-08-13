@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -35,9 +37,16 @@ async def resolve_conversation(
 
 
 async def save_message(
-    session: AsyncSession, *, conversation_id: str, role: str, content: str
+    session: AsyncSession,
+    *,
+    conversation_id: str,
+    role: str,
+    content: str,
+    tool_data: list[dict[str, Any]] | None = None,
 ) -> str:
-    message = Message(conversation_id=conversation_id, role=role, content=content)
+    message = Message(
+        conversation_id=conversation_id, role=role, content=content, tool_data=tool_data
+    )
     session.add(message)
     await session.commit()
     await session.refresh(message)
@@ -102,11 +111,21 @@ class ConversationRecorder:
             await save_message(session, conversation_id=cid, role="user", content=question)
         return cid
 
-    async def finish(self, *, conversation_id: str, answer: str) -> str:
-        """Save the assistant answer; return its message id (so the client can attach feedback)."""
+    async def finish(
+        self,
+        *,
+        conversation_id: str,
+        answer: str,
+        tool_data: list[dict[str, Any]] | None = None,
+    ) -> str:
+        """Save the assistant answer + its tool steps; return the message id (for feedback)."""
         async with get_sessionmaker()() as session:
             return await save_message(
-                session, conversation_id=conversation_id, role="assistant", content=answer
+                session,
+                conversation_id=conversation_id,
+                role="assistant",
+                content=answer,
+                tool_data=tool_data,
             )
 
 
