@@ -37,6 +37,7 @@ import {
     type PropsWithChildren,
     useContext,
 } from "react";
+import { useTranslation } from "react-i18next";
 import {
     ComposerAddAttachment,
     ComposerAttachments,
@@ -435,6 +436,7 @@ const AssistantMessage: FC = () => {
 };
 
 const AssistantActionBar: FC = () => {
+    const { t } = useTranslation();
     return (
         <ActionBarPrimitive.Root
             hideWhenRunning
@@ -454,7 +456,7 @@ const AssistantActionBar: FC = () => {
             <ActionBarPrimitive.FeedbackPositive
                 render={
                     <TooltipIconButton
-                        tooltip="Buena respuesta"
+                        tooltip={t("feedback.good")}
                         // Highlight the chosen rating: assistant-ui sets data-submitted on the selected button.
                         className="data-[submitted]:text-primary data-[submitted]:[&_svg]:fill-current"
                     />
@@ -465,7 +467,7 @@ const AssistantActionBar: FC = () => {
             <ActionBarPrimitive.FeedbackNegative
                 render={
                     <TooltipIconButton
-                        tooltip="Mala respuesta"
+                        tooltip={t("feedback.bad")}
                         className="data-[submitted]:text-primary data-[submitted]:[&_svg]:fill-current"
                     />
                 }

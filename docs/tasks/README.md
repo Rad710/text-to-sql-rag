@@ -60,6 +60,7 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 | [0037](0037-chitchat-prompt/) | **Chit-chat prompt cleanup** — reword the non-DB system-prompt rule to a single general instruction (no enumerated greetings). Reduces but can't fully stop `llama3.1:8b` from narrating its reasoning — a model limit, not wording | done | — |
 | [0038](0038-drop-deploy-mode/) | **Drop `DEPLOY_MODE`** — remove the demo/live preset (its only job was rate-limit defaults, redundant next to `LLM_MODE`); set `/chat` limits directly via `RATE_LIMIT_PER_MIN`/`_PER_DAY` ([decision 0012](../decisions/0012-drop-deploy-mode.md), supersedes 0010) | done | — |
 | [0039](0039-hardened-auth-frontend-store/) | **Harden auth + frontend store** — short-lived access (in memory) + rotating/reuse-detected refresh token + strict CSP; replace the 3 global-mutable modules with a `zustand` session store; de-string-ify the runtime adapter ([decision 0013](../decisions/0013-hardened-bearer-jwt.md), supersedes 0009) | done | — |
+| [0040](0040-language-toggle-i18n/) | **Language toggle + i18n** — react-i18next ES/EN toggle (auto-detects machine language) replacing the bilingual UI; chrome language sent to `/chat` and drives the answer language ([decision 0014](../decisions/0014-ui-language-i18n.md)) | done | — |
 
 ## Backlog — open, unscheduled
 
@@ -70,6 +71,16 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 
 ## Done
 
+- [0040](0040-language-toggle-i18n/) — **language toggle + i18n**: replaced the bilingual "both at once"
+  UI with `react-i18next` + browser language detection — a header **ES | EN** toggle (auto-selects the
+  machine language on first load, persisted under `dyr_lang`, fallback `es`). All app-owned chrome +
+  the two customized feedback tooltips are localized; suggestions are per-language. The toggle is
+  authoritative: the frontend sends `language` on `/chat` and the backend drives the answer language
+  from it (real LLM via a system directive, mock via `complete(language=…)`, plus localized
+  `_FALLBACK`/`_EXHAUSTED`), falling back to question-detection when absent. Client now localizes the
+  session/rate-limit messages itself (no reliance on the backend 429 detail). Decision **0014**. Tests
+  run in English (pinned) + a toggle test; gates green (backend ruff/mypy/pytest, frontend
+  biome/tsc/vitest + production build).
 - [0039](0039-hardened-auth-frontend-store/) — **harden auth + frontend store**: replaced the single
   long-lived JWT in `localStorage` with a **short-lived access token (in memory) + a rotated,
   reuse-detected refresh token** (new `refresh_tokens` table + `/auth/refresh` + `/auth/logout`;

@@ -1,12 +1,14 @@
 import { type FC, type FormEvent, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { login, register } from "@/api/auth";
 
 /**
  * The login / register form card (decisions 0009, 0013). On success `login`/`register` set the user in
- * the session store, and the LoginPage redirects to `/`.
+ * the session store, and the LoginPage redirects to `/`. Strings are localized (task 0040).
  */
 export const LoginForm: FC = () => {
+    const { t } = useTranslation();
     const [mode, setMode] = useState<"login" | "register">("login");
     const [email, setEmail] = useState("");
     const [name, setName] = useState("");
@@ -27,7 +29,9 @@ export const LoginForm: FC = () => {
                 await login(email, password);
             }
         } catch (err) {
-            setError(err instanceof Error ? err.message : "No se pudo iniciar sesión");
+            // The thrown message is an i18n key (see api/auth); unknown ones fall back to generic.
+            const key = err instanceof Error ? err.message : "errors.signInFailed";
+            setError(t(key, { defaultValue: t("errors.signInFailed") }));
         } finally {
             setBusy(false);
         }
@@ -46,7 +50,7 @@ export const LoginForm: FC = () => {
                 DYR Transportes — Data Assistant
             </h1>
             <p className="text-muted-foreground mb-5 text-center text-sm">
-                {isRegister ? "Creá tu cuenta para empezar" : "Iniciá sesión para continuar"}
+                {isRegister ? t("login.signUpSubtitle") : t("login.signInSubtitle")}
             </p>
 
             <div className="flex flex-col gap-2.5">
@@ -54,8 +58,8 @@ export const LoginForm: FC = () => {
                     <input
                         className={field}
                         type="text"
-                        placeholder="Nombre"
-                        aria-label="Nombre"
+                        placeholder={t("login.name")}
+                        aria-label={t("login.name")}
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         required
@@ -64,8 +68,8 @@ export const LoginForm: FC = () => {
                 <input
                     className={field}
                     type="email"
-                    placeholder="Email"
-                    aria-label="Email"
+                    placeholder={t("login.email")}
+                    aria-label={t("login.email")}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -73,8 +77,8 @@ export const LoginForm: FC = () => {
                 <input
                     className={field}
                     type="password"
-                    placeholder="Contraseña"
-                    aria-label="Contraseña"
+                    placeholder={t("login.password")}
+                    aria-label={t("login.password")}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -88,7 +92,7 @@ export const LoginForm: FC = () => {
                 disabled={busy}
                 className="bg-primary text-primary-foreground mt-4 w-full rounded-lg py-2 text-sm font-medium disabled:opacity-50"
             >
-                {busy ? "…" : isRegister ? "Crear cuenta" : "Entrar"}
+                {busy ? "…" : isRegister ? t("login.signUp") : t("login.signIn")}
             </button>
 
             <button
@@ -99,7 +103,7 @@ export const LoginForm: FC = () => {
                 }}
                 className="text-muted-foreground hover:text-foreground mt-3 w-full text-center text-xs"
             >
-                {isRegister ? "¿Ya tenés cuenta? Iniciá sesión" : "¿No tenés cuenta? Registrate"}
+                {isRegister ? t("login.toSignIn") : t("login.toSignUp")}
             </button>
         </form>
     );

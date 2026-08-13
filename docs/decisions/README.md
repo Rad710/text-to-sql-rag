@@ -18,3 +18,4 @@ numbered record that supersedes it, and link both ways. Template: [`_template.md
 | [0011](0011-flyway-mock-db-migrations.md) | Provision the mock query DB with Flyway migrations (`mock-db/migration/`), superseding 0004's init-SQL | accepted | 2026-08-12 |
 | [0012](0012-drop-deploy-mode.md) | Drop `DEPLOY_MODE`; set `/chat` rate limits directly via `RATE_LIMIT_PER_MIN`/`_PER_DAY` (supersedes 0010's preset) | accepted | 2026-08-13 |
 | [0013](0013-hardened-bearer-jwt.md) | Hardened bearer JWT: short-lived access (in memory) + rotating/reuse-detected refresh + strict CSP (supersedes 0009) | accepted | 2026-08-13 |
+| [0014](0014-ui-language-i18n.md) | UI language via react-i18next (auto-detected ES/EN toggle); chrome language sent to `/chat` and drives the answer language | accepted | 2026-08-13 |

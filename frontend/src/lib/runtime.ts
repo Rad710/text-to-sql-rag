@@ -6,6 +6,7 @@ import type {
 } from "@assistant-ui/react";
 
 import { apiFetch } from "@/api/client";
+import i18n from "@/i18n";
 import { useSession } from "@/stores/session";
 
 /** Join a message's text parts (ignoring tool-call/other parts) into a plain string. */
@@ -80,6 +81,7 @@ export const adapter: ChatModelAdapter = {
                 question,
                 history,
                 conversation_id: useSession.getState().conversationId,
+                language: i18n.resolvedLanguage ?? "es", // drives the answer language (task 0040)
             }),
             signal: abortSignal,
         });
@@ -87,38 +89,32 @@ export const adapter: ChatModelAdapter = {
         if (!res.ok || !res.body) {
             // apiFetch already tried to refresh and signed out on a hard 401 → the session expired.
             if (res.status === 401) {
-                yield {
-                    content: [
-                        { type: "text", text: "⚠️ Tu sesión expiró. Iniciá sesión de nuevo." },
-                    ],
-                };
+                yield { content: [{ type: "text", text: i18n.t("chat.sessionExpired") }] };
                 return;
             }
-            // Rate limited (decision 0010): the backend detail is the reason; we own the retry hint.
-            // Short waits (the per-minute limit) show seconds; the long daily-cap wait says "más tarde".
+            // Rate limited (decision 0010): the message is fully localized on the client now. A short
+            // Retry-After (the per-minute limit) shows seconds; the long daily-cap wait says "later".
             if (res.status === 429) {
                 const retry = Number(res.headers.get("Retry-After"));
-                const hint =
-                    retry > 0 && retry <= 90
-                        ? ` Probá de nuevo en ${retry} s.`
-                        : " Probá de nuevo más tarde.";
-                let detail: string | undefined;
-                try {
-                    detail = ((await res.json()) as { detail?: string }).detail;
-                } catch {
-                    detail = undefined;
-                }
-                yield {
-                    content: [
-                        {
-                            type: "text",
-                            text: `⚠️ ${detail ?? "Alcanzaste el límite de consultas."}${hint}`,
-                        },
-                    ],
-                };
+                const short = retry > 0 && retry <= 90;
+                const reason = i18n.t(short ? "chat.rateLimitMinute" : "chat.rateLimitDay");
+                const hint = short
+                    ? i18n.t("chat.retrySeconds", { seconds: retry })
+                    : i18n.t("chat.retryLater");
+                yield { content: [{ type: "text", text: `⚠️ ${reason}${hint}` }] };
                 return;
             }
-            yield { content: [{ type: "text", text: `⚠️ ${res.status} ${res.statusText}` }] };
+            yield {
+                content: [
+                    {
+                        type: "text",
+                        text: i18n.t("chat.error", {
+                            status: res.status,
+                            statusText: res.statusText,
+                        }),
+                    },
+                ],
+            };
             return;
         }
 

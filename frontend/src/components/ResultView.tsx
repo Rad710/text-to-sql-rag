@@ -1,4 +1,5 @@
 import { lazy, Suspense, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { analyzeResult, formatCellValue, parseNumeric } from "@/lib/chart-data";
@@ -70,6 +71,7 @@ type View = "table" | "chart";
 
 /** Small segmented Tabla/Gráfico switch — only rendered when a chart actually fits. */
 function ViewToggle({ view, onChange }: { view: View; onChange: (v: View) => void }) {
+    const { t } = useTranslation();
     return (
         <div
             className="mb-1 inline-flex gap-0.5 rounded-lg bg-muted p-0.5"
@@ -81,7 +83,7 @@ function ViewToggle({ view, onChange }: { view: View; onChange: (v: View) => voi
                 aria-pressed={view === "table"}
                 onClick={() => onChange("table")}
             >
-                Tabla
+                {t("result.table")}
             </Button>
             <Button
                 size="xs"
@@ -89,7 +91,7 @@ function ViewToggle({ view, onChange }: { view: View; onChange: (v: View) => voi
                 aria-pressed={view === "chart"}
                 onClick={() => onChange("chart")}
             >
-                Gráfico
+                {t("result.chart")}
             </Button>
         </div>
     );
@@ -100,6 +102,7 @@ function ViewToggle({ view, onChange }: { view: View; onChange: (v: View) => voi
  * fits (one label column + numeric column(s), 2..50 rows — see analyzeResult). Table is the default view.
  */
 export function ResultView(result: SqlResult) {
+    const { t } = useTranslation();
     const spec = useMemo(
         () => analyzeResult(result.columns, result.rows),
         [result.columns, result.rows],
@@ -114,7 +117,7 @@ export function ResultView(result: SqlResult) {
                 <Suspense
                     fallback={
                         <div className="text-muted-foreground my-2 h-64 text-xs">
-                            Cargando gráfico…
+                            {t("result.loadingChart")}
                         </div>
                     }
                 >
@@ -124,8 +127,8 @@ export function ResultView(result: SqlResult) {
                 <ResultTable {...result} />
             )}
             <p className="text-muted-foreground mt-1 text-xs">
-                {result.rowCount} {result.rowCount === 1 ? "row" : "rows"}
-                {result.truncated ? ", truncated" : ""}
+                {t("result.rows", { count: result.rowCount })}
+                {result.truncated ? t("result.truncated") : ""}
             </p>
         </div>
     );

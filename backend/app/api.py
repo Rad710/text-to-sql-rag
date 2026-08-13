@@ -109,6 +109,9 @@ class ChatRequest(BaseModel):
     question: str
     history: list[Turn] = []
     conversation_id: str | None = None
+    language: Literal["es", "en"] | None = (
+        None  # UI language (task 0040); drives the answer language
+    )
 
 
 @app.get("/health")
@@ -149,7 +152,9 @@ async def chat(
     async def event_stream() -> AsyncIterator[str]:
         yield _sse(AgentEvent("conversation", {"id": conversation_id}))
         answer = ""
-        for event in stream(req.question, store=store, schema=schema, history=history):
+        for event in stream(
+            req.question, store=store, schema=schema, history=history, language=req.language
+        ):
             if event.type == "answer":
                 answer = str(event.data.get("text") or "")
             yield _sse(event)

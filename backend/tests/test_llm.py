@@ -248,3 +248,23 @@ def test_answer_language_matches_question() -> None:
     en = mock.complete(convo("total freight revenue per route"), TOOLS).content
     assert es is not None and es.startswith("Consulté")
     assert en is not None and en.startswith("I queried")
+
+
+def test_language_arg_overrides_question_detection() -> None:
+    """The UI language (task 0040) wins over the question's detected language when passed."""
+
+    def convo(q: str) -> list[dict[str, Any]]:
+        return [
+            SYS,
+            _user(q),
+            _assistant_call("search_schema", {"question": q}),
+            _tool_result("ctx"),
+            _assistant_call("run_sql", {"query": "SELECT 1"}),
+            _tool_result("rows"),
+        ]
+
+    # Question is English, but language="es" forces the Spanish prose, and vice versa.
+    forced_es = mock.complete(convo("total revenue per route"), TOOLS, language="es").content
+    forced_en = mock.complete(convo("facturación total por ruta"), TOOLS, language="en").content
+    assert forced_es is not None and forced_es.startswith("Consulté")
+    assert forced_en is not None and forced_en.startswith("I queried")

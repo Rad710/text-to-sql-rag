@@ -24,7 +24,10 @@ class StubLLM:
         self._i = 0
 
     def complete(
-        self, messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = None
+        self,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+        language: str | None = None,
     ) -> LlmResponse:
         response = self._responses[self._i]
         self._i += 1
@@ -35,7 +38,10 @@ class AlwaysToolLLM:
     """Always asks for a tool call — never finishes (to exercise the iteration cap)."""
 
     def complete(
-        self, messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = None
+        self,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+        language: str | None = None,
     ) -> LlmResponse:
         return _call("run_sql", {"query": "SELECT 1"})
 
@@ -111,7 +117,7 @@ def test_iteration_cap() -> None:
         "q", AlwaysToolLLM(), _tools(lambda q: RunResult(sql=q, columns=["n"], rows=[(1,)])), 3
     )
     assert result.iterations == 3
-    assert result.answer == _EXHAUSTED
+    assert result.answer == _EXHAUSTED["es"]  # default language (no UI language passed)
 
 
 def test_general_answer_without_tools() -> None:
@@ -182,7 +188,10 @@ def test_history_is_prepended_before_the_question() -> None:
 
     class CapturingLLM:
         def complete(
-            self, messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = None
+            self,
+            messages: list[dict[str, Any]],
+            tools: list[dict[str, Any]] | None = None,
+            language: str | None = None,
         ) -> LlmResponse:
             captured.extend(messages)
             return _answer("ok")

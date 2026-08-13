@@ -1,6 +1,7 @@
 import type { ThreadMessageLike } from "@assistant-ui/react";
 import { Menu } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import {
     type ConversationSummary,
@@ -9,12 +10,14 @@ import {
 } from "@/api/conversations";
 import { ChatPane } from "@/components/ChatPane";
 import { ConversationSidebar } from "@/components/ConversationSidebar";
+import { LanguageToggle } from "@/components/LanguageToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { useServerMode } from "@/hooks/useServerMode";
 import { useSession } from "@/stores/session";
 
 /** / — the authenticated chat app: header + conversation sidebar (drawer on mobile) + the chat pane. */
 export function ChatPage() {
+    const { t } = useTranslation();
     const { user, logout } = useAuth();
     const modeLabel = useServerMode();
 
@@ -73,7 +76,7 @@ export function ChatPage() {
                     <button
                         type="button"
                         onClick={() => setSidebarOpen(true)}
-                        aria-label="Abrir conversaciones"
+                        aria-label={t("common.openMenu")}
                         className="text-muted-foreground hover:text-foreground -ml-1 shrink-0 md:hidden"
                     >
                         <Menu className="size-5" />
@@ -89,12 +92,13 @@ export function ChatPage() {
                     <span className="text-muted-foreground hidden text-xs sm:inline">
                         {user?.name}
                     </span>
+                    <LanguageToggle />
                     <button
                         type="button"
                         onClick={logout}
                         className="text-muted-foreground hover:text-foreground text-xs underline underline-offset-2"
                     >
-                        Salir
+                        {t("common.logout")}
                     </button>
                 </div>
             </header>

@@ -46,17 +46,18 @@ function rateLimited(retryAfter: string, detail: string): typeof fetch {
 test("renders seconds hint for a short per-minute rate limit (429)", async () => {
     vi.stubGlobal("fetch", rateLimited("30", "Demasiadas consultas seguidas."));
     const text = await runToText();
-    expect(text).toMatch(/demasiadas consultas seguidas/i);
-    expect(text).toMatch(/en 30 s/);
-    expect(text).not.toMatch(/más tarde/);
+    // The message is now localized on the client (task 0040), not taken from the backend detail.
+    expect(text).toMatch(/per-minute query limit/i);
+    expect(text).toMatch(/in 30 s/);
+    expect(text).not.toMatch(/later/i);
 });
 
-// The daily cap returns a long Retry-After (seconds to midnight) — we collapse that to "más tarde"
+// The daily cap returns a long Retry-After (seconds to midnight) — we collapse that to "later"
 // instead of dumping tens of thousands of seconds at the user.
-test("renders 'más tarde' for the long daily-cap wait (429)", async () => {
+test("renders 'later' for the long daily-cap wait (429)", async () => {
     vi.stubGlobal("fetch", rateLimited("28302", "Alcanzaste el límite diario de consultas."));
     const text = await runToText();
-    expect(text).toMatch(/límite diario de consultas/i);
-    expect(text).toMatch(/más tarde/);
+    expect(text).toMatch(/daily query limit/i);
+    expect(text).toMatch(/later/i);
     expect(text).not.toMatch(/\d+ s/);
 });

@@ -52,8 +52,8 @@ test("mounts without crashing and shows the login screen when unauthenticated", 
     render(<App />);
     expect(await screen.findByRole("heading", { name: /DYR Transportes/i })).toBeInTheDocument();
     expect(screen.getByLabelText("Email")).toBeInTheDocument();
-    expect(screen.getByLabelText("Contraseña")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /entrar/i })).toBeInTheDocument();
+    expect(screen.getByLabelText("Password")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /sign in/i })).toBeInTheDocument();
 });
 
 // Authenticated (token in storage + /auth/me → a user): the chat renders. A suggestion click POSTs to
@@ -84,9 +84,7 @@ test("authenticated: renders tool steps + result table + answer, and sends the B
     vi.stubGlobal("fetch", fetchMock);
 
     render(<App />);
-    await userEvent.click(
-        await screen.findByRole("button", { name: /facturación total por ruta/i }),
-    );
+    await userEvent.click(await screen.findByRole("button", { name: /total revenue per route/i }));
 
     expect(await screen.findByText(/2 tool calls/i)).toBeInTheDocument();
     expect(screen.getByRole("table")).toBeInTheDocument();
@@ -99,9 +97,9 @@ test("authenticated: renders tool steps + result table + answer, and sends the B
 
     // The result is chartable (label + numeric, 2 rows), so a Tabla/Gráfico toggle appears (task 0021).
     // Switching to Gráfico lazy-loads the Recharts chart; the table view is the default.
-    await userEvent.click(screen.getByRole("button", { name: /gráfico/i }));
+    await userEvent.click(screen.getByRole("button", { name: /chart/i }));
     expect(await screen.findByTestId("result-chart")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: /tabla/i }));
+    await userEvent.click(screen.getByRole("button", { name: /table/i }));
     expect(screen.getByRole("table")).toBeInTheDocument();
 
     const chatCall = fetchMock.mock.calls.find((c) => String(c[0]) === "/chat");
@@ -109,11 +107,12 @@ test("authenticated: renders tool steps + result table + answer, and sends the B
     const init = chatCall?.[1] as RequestInit;
     expect((init.headers as Record<string, string>).Authorization).toBe("Bearer acc-1");
     const body = JSON.parse(init.body as string);
-    expect(body.question).toMatch(/facturación total por ruta/);
+    expect(body.question).toMatch(/total revenue per route/);
     expect(body.history).toEqual([]);
+    expect(body.language).toBe("en"); // the UI language is sent to drive the answer (task 0040)
 
     // 👍 on the answer posts feedback for the streamed message id (task 0020).
-    const thumbUp = await screen.findByRole("button", { name: /buena respuesta/i });
+    const thumbUp = await screen.findByRole("button", { name: /good response/i });
     await userEvent.click(thumbUp);
     const fb = fetchMock.mock.calls.find((c) => String(c[0]) === "/feedback");
     if (!fb) throw new Error("expected a /feedback POST");
@@ -123,7 +122,7 @@ test("authenticated: renders tool steps + result table + answer, and sends the B
     });
     // The chosen rating is highlighted so the user sees it registered (task 0027).
     expect(thumbUp).toHaveAttribute("data-submitted", "true");
-    expect(screen.getByRole("button", { name: /mala respuesta/i })).not.toHaveAttribute(
+    expect(screen.getByRole("button", { name: /bad response/i })).not.toHaveAttribute(
         "data-submitted",
     );
 });

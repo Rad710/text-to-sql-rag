@@ -23,8 +23,20 @@ from app.rag.schema import SchemaInfo
 from app.safety.execution import RunResult, format_result
 from app.safety.execution import run_sql as execute_sql
 
-_FALLBACK = "No pude generar una respuesta."
-_EXHAUSTED = "No pude completar la consulta dentro del número de pasos permitido."
+_LANGUAGE_NAMES = {"es": "Spanish", "en": "English"}
+_FALLBACK = {
+    "es": "No pude generar una respuesta.",
+    "en": "I couldn't generate an answer.",
+}
+_EXHAUSTED = {
+    "es": "No pude completar la consulta dentro del número de pasos permitido.",
+    "en": "I couldn't complete the query within the allowed number of steps.",
+}
+
+
+def _lang(language: str | None) -> str:
+    """Normalize the requested UI language (task 0040); Spanish is the domain default."""
+    return language if language in ("es", "en") else "es"
 
 
 @dataclass(frozen=True, slots=True)
@@ -64,25 +76,35 @@ def stream_answer(
     tools: AgentTools,
     max_iterations: int,
     history: list[dict[str, Any]] | None = None,
+    language: str | None = None,
 ) -> Iterator[AgentEvent]:
     """Drive the bounded tool-loop, yielding events as it runs (the single source of truth).
 
     ``history`` is prior conversation turns (``{role, content}`` text) prepended before the current
-    question so the model has context for follow-ups (task 0016).
+    question so the model has context for follow-ups (task 0016). ``language`` (task 0040) is the UI
+    language — when set, the answer + fallback messages use it (the real LLM via a system directive,
+    the mock via ``complete(language=…)``) rather than following the question's language.
     """
+    lang = _lang(language)
+    system = SYSTEM_PROMPT
+    if language in ("es", "en"):
+        system += (
+            f"\n\nAlways write the final answer in {_LANGUAGE_NAMES[language]}, "
+            "regardless of the language of the question."
+        )
     messages: list[dict[str, Any]] = [
-        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "system", "content": system},
         *(history or []),
         {"role": "user", "content": question},
     ]
     usage = ZERO_USAGE
 
     for iteration in range(1, max_iterations + 1):
-        response = llm.complete(messages, TOOLS)
+        response = llm.complete(messages, TOOLS, language=language)
         usage = usage + response.usage
 
         if not response.tool_calls:
-            yield AgentEvent("answer", {"text": response.content or _FALLBACK})
+            yield AgentEvent("answer", {"text": response.content or _FALLBACK[lang]})
             yield from _finish(usage, iteration)
             return
 
@@ -101,7 +123,7 @@ def stream_answer(
             )
             messages.append({"role": "tool", "tool_call_id": call.id, "content": content})
 
-    yield AgentEvent("answer", {"text": _EXHAUSTED})
+    yield AgentEvent("answer", {"text": _EXHAUSTED[lang]})
     yield from _finish(usage, max_iterations)
 
 
@@ -125,15 +147,16 @@ def answer_question(
     tools: AgentTools,
     max_iterations: int,
     history: list[dict[str, Any]] | None = None,
+    language: str | None = None,
 ) -> AgentResult:
     """Run the loop to completion and fold its events into an ``AgentResult``."""
-    answer = _FALLBACK
+    answer = _FALLBACK[_lang(language)]
     sql: list[str] = []
     trace: list[ToolInvocation] = []
     usage = ZERO_USAGE
     iterations = 0
 
-    for event in stream_answer(question, llm, tools, max_iterations, history):
+    for event in stream_answer(question, llm, tools, max_iterations, history, language):
         if event.type == "tool_result":
             name, arguments = event.data["name"], event.data["arguments"]
             trace.append(ToolInvocation(name, arguments, event.data["preview"]))
@@ -215,12 +238,15 @@ def ask(
     settings: Settings | None = None,
     llm: LlmProvider | None = None,
     history: list[dict[str, Any]] | None = None,
+    language: str | None = None,
 ) -> AgentResult:
     """High-level entry point used by the API: assemble tools + provider and run the loop."""
     resolved = settings or get_settings()
     provider = llm or get_llm(resolved)
     tools = build_tools(store, schema, resolved)
-    return answer_question(question, provider, tools, resolved.agent_max_iterations, history)
+    return answer_question(
+        question, provider, tools, resolved.agent_max_iterations, history, language
+    )
 
 
 def stream(
@@ -231,9 +257,12 @@ def stream(
     settings: Settings | None = None,
     llm: LlmProvider | None = None,
     history: list[dict[str, Any]] | None = None,
+    language: str | None = None,
 ) -> Iterator[AgentEvent]:
     """Streaming counterpart of :func:`ask` — yields agent events for the SSE endpoint."""
     resolved = settings or get_settings()
     provider = llm or get_llm(resolved)
     tools = build_tools(store, schema, resolved)
-    return stream_answer(question, provider, tools, resolved.agent_max_iterations, history)
+    return stream_answer(
+        question, provider, tools, resolved.agent_max_iterations, history, language
+    )

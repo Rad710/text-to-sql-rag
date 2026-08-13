@@ -92,7 +92,10 @@ class LlmResponse:
 
 class LlmProvider(Protocol):
     def complete(
-        self, messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = None
+        self,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+        language: str | None = None,
     ) -> LlmResponse: ...
 
 
@@ -122,13 +125,17 @@ class MockProvider:
     """Deterministic provider: question → search_schema → run_sql → answer, from history alone."""
 
     def complete(
-        self, messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = None
+        self,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+        language: str | None = None,
     ) -> LlmResponse:
         settings = get_settings()
         question = _latest_user_message(messages)
         made = _tool_calls_made(messages)
         sql, score = _match_example(question)
-        lang = _detect_lang(question)
+        # The UI language (task 0040) wins when set; else detect it from the question.
+        lang = language if language in ("es", "en") else _detect_lang(question)
 
         content: str | None
         tool_calls: list[ToolCall] = []
@@ -214,9 +221,13 @@ class OpenAIProvider:
         return self._client
 
     def complete(
-        self, messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = None
+        self,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+        language: str | None = None,
     ) -> LlmResponse:
-        # `tools` unused: we prompt a fenced-block protocol instead of JSON function-calling.
+        # `tools`/`language` unused here: we prompt a fenced-block protocol instead of JSON
+        # function-calling, and the answer-language directive is already in the system prompt.
         response = self._get_client().chat.completions.create(
             model=self._settings.llm_model, messages=_render_history_as_text(messages)
         )

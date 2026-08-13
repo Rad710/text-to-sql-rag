@@ -23,12 +23,12 @@ async function completeSignIn(res: Response): Promise<void> {
     useSession.getState().setUser(await fetchMe());
 }
 
+// Errors carry an i18n key (not a message); the form translates it via t(). Keeps this layer
+// language-agnostic (task 0040).
 export async function login(email: string, password: string): Promise<void> {
     const res = await postJson("/auth/login", { email, password });
     if (!res.ok) {
-        throw new Error(
-            res.status === 401 ? "Email o contraseña incorrectos" : `Error ${res.status}`,
-        );
+        throw new Error(res.status === 401 ? "errors.invalidCredentials" : "errors.generic");
     }
     await completeSignIn(res);
 }
@@ -36,11 +36,10 @@ export async function login(email: string, password: string): Promise<void> {
 export async function register(email: string, name: string, password: string): Promise<void> {
     const res = await postJson("/auth/register", { email, name, password });
     if (!res.ok) {
-        if (res.status === 409) throw new Error("Ese email ya está registrado");
+        if (res.status === 409) throw new Error("errors.emailTaken");
         // 422 = the API rejected the email format or the password length (min 8).
-        if (res.status === 422)
-            throw new Error("Revisá el email y que la contraseña tenga al menos 8 caracteres");
-        throw new Error(`Error ${res.status}`);
+        if (res.status === 422) throw new Error("errors.invalidInput");
+        throw new Error("errors.generic");
     }
     await completeSignIn(res);
 }

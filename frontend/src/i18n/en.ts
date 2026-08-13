@@ -1,0 +1,58 @@
+export const en = {
+    common: {
+        logout: "Log out",
+        loading: "Loading…",
+        newConversation: "+ New conversation",
+        noConversations: "No conversations yet",
+        openMenu: "Open conversations",
+        closeMenu: "Close menu",
+    },
+    welcome: {
+        title: "What would you like to know?",
+        subtitle: "Ask about shipments, drivers, routes & billing",
+    },
+    suggestions: [
+        "total revenue per route",
+        "how many shipments did each driver make and total kilos",
+        "uncollected shipment payrolls and their outstanding total",
+        "drivers with unpaid settlements and pending amount",
+    ],
+    login: {
+        signInSubtitle: "Sign in to continue",
+        signUpSubtitle: "Create your account to get started",
+        name: "Name",
+        email: "Email",
+        password: "Password",
+        signIn: "Sign in",
+        signUp: "Create account",
+        toSignUp: "No account? Sign up",
+        toSignIn: "Already have an account? Sign in",
+    },
+    errors: {
+        invalidCredentials: "Incorrect email or password",
+        emailTaken: "That email is already registered",
+        invalidInput: "Check the email and that the password is at least 8 characters",
+        signInFailed: "Couldn't sign in",
+        generic: "Something went wrong",
+    },
+    result: {
+        table: "Table",
+        chart: "Chart",
+        loadingChart: "Loading chart…",
+        rows_one: "{{count}} row",
+        rows_other: "{{count}} rows",
+        truncated: ", truncated",
+    },
+    feedback: {
+        good: "Good response",
+        bad: "Bad response",
+    },
+    chat: {
+        sessionExpired: "⚠️ Your session expired. Sign in again.",
+        rateLimitMinute: "You've hit the per-minute query limit.",
+        rateLimitDay: "You've hit the daily query limit.",
+        retrySeconds: " Try again in {{seconds}} s.",
+        retryLater: " Try again later.",
+        error: "⚠️ {{status}} {{statusText}}",
+    },
+};
