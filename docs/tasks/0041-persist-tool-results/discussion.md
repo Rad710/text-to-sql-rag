@@ -50,3 +50,14 @@ Append-only. Newest at the bottom, each entry dated.
     difference is the missing usage footer (steps·tokens·cost) — UI chrome, not persisted.
   - Gates green: backend ruff/format/mypy/pytest (+2 new unit tests), frontend biome/tsc/vitest (+3 new
     `tool-parts` tests), integration round-trip (`test_conversations` now asserts `tool_data`).
+
+- 2026-08-13: **CI e2e was red before reaching the new assertions** — the whole suite used Spanish
+  labels/selectors, but since task 0040 the UI auto-detects the machine language (navigator), which is
+  English on CI, so it failed at the register button (`/registrate/i`). Pre-existing 0040 breakage that
+  my Spanish answer assertion (`/Consulté la base de datos/`) would have inherited too. Fixed by
+  **switching the whole suite to English** and pinning the language deterministically: a
+  `test.beforeEach` seeds `localStorage.dyr_lang = "en"` via `addInitScript` (the i18n detector reads
+  that key first), which also drives the answer language ("I queried the database…"). All selectors
+  rewritten to the English labels (`Sign up` / `Create account` / `Log out` / `^Sign in$` / `Chart` /
+  `Good response` / `total revenue per route` / `open conversations` / `new conversation`); the
+  follow-up question is now `and per driver?`. All 3 e2e tests pass locally against the dev stack.
