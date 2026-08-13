@@ -7,11 +7,10 @@ import-time-cheap, and shared across layers. Re-exported here so call sites keep
 
 from __future__ import annotations
 
-from app.config.config import DeployMode, LlmMode, Settings, get_settings
+from app.config.config import LlmMode, Settings, get_settings
 from app.config.ratelimit import RateLimiter, RateLimitResult
 
 __all__ = [
-    "DeployMode",
     "LlmMode",
     "RateLimiter",
     "RateLimitResult",

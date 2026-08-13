@@ -2,8 +2,8 @@
 
 Production deployment for the text-to-SQL RAG assistant. The target is a **single Linux VM running
 docker-compose** (decision: task [0014](docs/tasks/0014-deploy-live/)); the public URL runs the
-**mock-only demo** (`DEPLOY_MODE=demo`) — deterministic, no API cost, safe to leave open. The real-LLM
-(`live`) path is the same stack with a few env vars flipped (see below).
+**mock-only demo** — deterministic, no API cost, safe to leave open. The real-LLM path is the same
+stack with a few env vars flipped (see below).
 
 ## Architecture
 
@@ -39,10 +39,11 @@ Then edit `.env` and set at least these (see the comments in the file for the re
 - `JWT_SECRET` — a unique **≥32-byte** value: `python -c "import secrets; print(secrets.token_urlsafe(48))"`
 - `MYSQL_ROOT_PASSWORD`, `DB_PASSWORD` — the MySQL admin + read-only-user passwords
 - `APP_DB_PASSWORD` — the Postgres `app` user password (keep it in sync with `APP_DATABASE_URL`)
-- keep `DEPLOY_MODE=demo` + `LLM_MODE=mock` for the mock demo; set `WEB_PORT=8080` if port 80 is taken
+- keep `LLM_MODE=mock` for the mock demo; set `WEB_PORT=8080` if port 80 is taken
 
-For a **live** (real-LLM) deploy, also set `DEPLOY_MODE=live`, `LLM_MODE=openai`, and `LLM_BASE_URL` /
-`LLM_MODEL` / `LLM_API_KEY` at an OpenAI-compatible server (see §5).
+For a **live** (real-LLM) deploy, set `LLM_MODE=openai` with `LLM_BASE_URL` / `LLM_MODEL` /
+`LLM_API_KEY` at an OpenAI-compatible server, plus stricter `RATE_LIMIT_PER_MIN` / `RATE_LIMIT_PER_DAY`
+to bound per-account cost (see §5).
 
 ## 2. Bring it up
 
@@ -93,19 +94,21 @@ nginx here listens on plain `:80`. For HTTPS, put a TLS terminator in front — 
 
 ## 5. Demo ↔ live (real LLM)
 
-The hosted demo is `DEPLOY_MODE=demo` (mock). To run a real model, stand up an OpenAI-compatible server
+The hosted demo runs the mock LLM. To run a real model, stand up an OpenAI-compatible server
 (Ollama or vLLM) reachable from the box and set in `.env`:
 
 ```dotenv
-DEPLOY_MODE=live      # 20 req/min + 100/day per user (decision 0010)
 LLM_MODE=openai
 LLM_BASE_URL=http://your-ollama-or-vllm:11434/v1
 LLM_MODEL=llama3.1
 LLM_API_KEY=ollama
+RATE_LIMIT_PER_MIN=20      # bound per-account cost (decisions 0010, 0012)
+RATE_LIMIT_PER_DAY=100
 ```
 
-then `docker compose -f docker/docker-compose.prod.yml up -d` (recreates `app`). See the README "Deploy modes"
-and decisions [0010](docs/decisions/0010-rate-limiting-deploy-modes.md) / [0015](docs/tasks/0015-real-llm-config/).
+then `docker compose -f docker/docker-compose.prod.yml up -d` (recreates `app`). See the README "Rate limits"
+and decisions [0010](docs/decisions/0010-rate-limiting-deploy-modes.md) /
+[0012](docs/decisions/0012-drop-deploy-mode.md) / [0015](docs/tasks/0015-real-llm-config/).
 
 ## 6. Update / teardown / backup
 

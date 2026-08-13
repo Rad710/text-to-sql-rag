@@ -58,6 +58,7 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 | [0035](0035-backend-consolidation/) | **`backend/` consolidation** — move all Python (`app`, `tests`, `evaluation`, `alembic`, `pyproject`, `uv.lock`) under `backend/` mirroring `frontend/`; rename `Dockerfile`→`backend.Dockerfile`; repoint CI/docker/docs. Behavior unchanged | done | 0033, 0034 |
 | [0036](0036-run-sql-arg-alias/) | **`run_sql` arg alias** — accept `sql` as an alias for the `query` argument so local models (llama3.1) that misname it aren't rejected as "empty SQL"; frontend renders bare SQL either way | done | — |
 | [0037](0037-chitchat-prompt/) | **Chit-chat prompt cleanup** — reword the non-DB system-prompt rule to a single general instruction (no enumerated greetings). Reduces but can't fully stop `llama3.1:8b` from narrating its reasoning — a model limit, not wording | done | — |
+| [0038](0038-drop-deploy-mode/) | **Drop `DEPLOY_MODE`** — remove the demo/live preset (its only job was rate-limit defaults, redundant next to `LLM_MODE`); set `/chat` limits directly via `RATE_LIMIT_PER_MIN`/`_PER_DAY` ([decision 0012](../decisions/0012-drop-deploy-mode.md), supersedes 0010) | done | — |
 
 ## Backlog — open, unscheduled
 
@@ -68,6 +69,14 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 
 ## Done
 
+- [0038](0038-drop-deploy-mode/) — **drop `DEPLOY_MODE`**: the `demo|live` knob only picked rate-limit
+  defaults (+ a `/health` label), which read as redundant/misleading next to `LLM_MODE`. Removed it
+  entirely — `config.py` (type + field + preset branching), the `/health` `deploy_mode` field, and both
+  deploy-mode config tests (replaced with default + env-read tests). `/chat` limits are now set only via
+  `RATE_LIMIT_PER_MIN`/`RATE_LIMIT_PER_DAY` (defaults 60 / 0); the prod compose forwards both so a live
+  deploy's per-account cost ceiling stays settable in a container. Decision **0012** (supersedes 0010,
+  whose per-user-rate-limiting substance is unchanged and body kept immutable); README "Deploy modes" →
+  "Rate limits" + DEPLOY.md updated. Frontend untouched (never read `deploy_mode`). Gates green.
 - [0037](0037-chitchat-prompt/) — **chit-chat prompt cleanup**: in live mode (`llama3.1:8b`) greetings got
   rambling nonsense that leaked the model's reasoning ("No schema or SQL call necessary…"). Reworded the
   non-DB rule to a single **general** instruction (owner's call — no enumerated greeting strings): use the

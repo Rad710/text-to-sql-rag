@@ -23,8 +23,9 @@ services:
     expose:
       - "8000"
     environment:
-      DEPLOY_MODE: ${DEPLOY_MODE:-demo}
       LLM_MODE: ${LLM_MODE:-mock}
+      RATE_LIMIT_PER_MIN: ${RATE_LIMIT_PER_MIN:-60}
+      RATE_LIMIT_PER_DAY: ${RATE_LIMIT_PER_DAY:-0}
       LLM_BASE_URL: ${LLM_BASE_URL:-http://localhost:11434/v1}
       LLM_MODEL: ${LLM_MODEL:-gpt-4o-mini}
       LLM_API_KEY: ${LLM_API_KEY:-not-needed}

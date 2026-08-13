@@ -86,29 +86,31 @@ LLM_API_KEY=ollama                       # any placeholder for Ollama; a real ke
 
 then start the API as above. `LLM_API_KEY` is optional for Ollama; set it if your server requires one.
 
-## Deploy modes
+## Rate limits
 
-The app ships in two flavors via `DEPLOY_MODE` ([decision 0010](docs/decisions/0010-rate-limiting-deploy-modes.md)),
-which sets sane **per-user** `/chat` rate-limit defaults; the mock LLM stays the default in both.
+`/chat` is rate-limited **per authenticated user** ([decision 0010](docs/decisions/0010-rate-limiting-deploy-modes.md),
+[0012](docs/decisions/0012-drop-deploy-mode.md)) via two env knobs — a per-minute rate and an optional
+per-day cap. The mock LLM stays the default.
 
-| Mode | LLM | `/chat` per-user limit | Use |
-|------|-----|------------------------|-----|
-| `demo` (default) | mock | 60/min, no daily cap | safe to leave open — deterministic, no cost |
-| `live` | real (Ollama/vLLM) | 20/min **and** 100/day | real-LLM deploy; the daily cap bounds per-account cost |
+| Var | Default | Meaning |
+|-----|---------|---------|
+| `RATE_LIMIT_PER_MIN` | `60` | max `/chat` calls per user per minute |
+| `RATE_LIMIT_PER_DAY` | `0` | per-user daily cap (cost ceiling); `0` = no daily limit |
 
-Set the flavor in `.env` (`demo` is the default). For `live`, also point `LLM_*` at a real model and use
-a real `JWT_SECRET`:
+The defaults suit the mock demo (safe to leave open — deterministic, no cost). For a real-LLM deploy,
+set stricter values to bound per-account cost and point `LLM_*` at a real model with a real `JWT_SECRET`:
 
 ```dotenv
-# .env
-DEPLOY_MODE=live
+# .env — real-LLM deploy
 LLM_MODE=openai
 LLM_BASE_URL=http://localhost:11434/v1
 LLM_MODEL=llama3.1
+RATE_LIMIT_PER_MIN=20
+RATE_LIMIT_PER_DAY=100
 JWT_SECRET=<generate one: python -c "import secrets; print(secrets.token_urlsafe(48))">
 ```
 
-The defaults are overridable: `RATE_LIMIT_PER_MIN` and `RATE_LIMIT_PER_DAY` (`0` = no daily cap). The
+The
 limiter is per-user and in-memory (per process; resets on restart). Over the limit, `/chat` returns
 `429` with `Retry-After` and the SPA shows a friendly message. **Note:** auth endpoints are not
 rate-limited (see decision 0010).
