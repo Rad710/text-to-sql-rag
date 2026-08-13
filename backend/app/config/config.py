@@ -20,7 +20,6 @@ from dotenv import load_dotenv
 load_dotenv(override=False)
 
 LlmMode = Literal["mock", "openai"]
-DeployMode = Literal["demo", "live"]
 
 # Allowed CORS origins for the frontend dev/preview servers (Vite).
 _DEFAULT_CORS = ("http://localhost:5173", "http://localhost:4173")
@@ -72,13 +71,10 @@ class Settings:
     jwt_algorithm: str = "HS256"
     jwt_expiry_min: int = 60 * 24  # 1 day
 
-    # Deploy flavor (decision 0010). "demo" = mock LLM, generous limits, no daily cap; "live" = real
-    # LLM, stricter per-minute rate + a per-user daily cap (cost control). Sets *defaults* only —
-    # the two knobs below still win when set explicitly in the environment.
-    deploy_mode: DeployMode = "demo"
-    # Per-user rate limit on /chat (keyed by JWT subject). per_day == 0 disables the daily cap.
+    # Per-user rate limit on /chat (keyed by JWT subject; decisions 0010, 0012). Set both explicitly
+    # in the environment for a real deploy (e.g. 20/min + a 100/day cost ceiling).
     rate_limit_per_min: int = 60
-    rate_limit_per_day: int = 0  # 0 = no daily ceiling (demo default)
+    rate_limit_per_day: int = 0  # 0 = no daily ceiling
 
     # Safety / agent limits.
     result_limit: int = 500
@@ -109,14 +105,10 @@ def get_settings() -> Settings:
     """Return the process-wide settings, resolved once from the environment and cached."""
     mode_raw = _get("LLM_MODE", "mock").lower()
     llm_mode: LlmMode = "openai" if mode_raw == "openai" else "mock"
-    # Deploy flavor drives the rate-limit *defaults*; explicit env knobs still override below.
-    deploy_mode: DeployMode = "live" if _get("DEPLOY_MODE", "demo").lower() == "live" else "demo"
-    default_per_min, default_per_day = (20, 100) if deploy_mode == "live" else (60, 0)
     return Settings(
         llm_mode=llm_mode,
-        deploy_mode=deploy_mode,
-        rate_limit_per_min=_get_int("RATE_LIMIT_PER_MIN", default_per_min),
-        rate_limit_per_day=_get_int("RATE_LIMIT_PER_DAY", default_per_day),
+        rate_limit_per_min=_get_int("RATE_LIMIT_PER_MIN", 60),
+        rate_limit_per_day=_get_int("RATE_LIMIT_PER_DAY", 0),
         llm_base_url=_get("LLM_BASE_URL", "http://localhost:8000/v1"),
         llm_api_key=_get("LLM_API_KEY", "not-needed"),
         llm_model=_get("LLM_MODEL", "gpt-4o-mini"),

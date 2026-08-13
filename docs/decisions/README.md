@@ -14,5 +14,6 @@ numbered record that supersedes it, and link both ways. Template: [`_template.md
 | [0007](0007-layered-package-structure.md) | Group `app/` into layered sub-packages (safety / rag / llm) by concern | accepted | 2026-08-11 |
 | [0008](0008-app-datastore-postgres.md) | A separate Postgres app datastore (SQLAlchemy + Alembic) for users/conversations/feedback | accepted | 2026-08-11 |
 | [0009](0009-auth-jwt.md) | Authentication via JWT bearer tokens | accepted | 2026-08-11 |
-| [0010](0010-rate-limiting-deploy-modes.md) | Per-user /chat rate limiting (pure in-memory limiter) + demo/live deploy modes | accepted | 2026-08-11 |
+| [0010](0010-rate-limiting-deploy-modes.md) | Per-user /chat rate limiting (pure in-memory limiter) + demo/live deploy modes | superseded by [0012](0012-drop-deploy-mode.md) | 2026-08-11 |
 | [0011](0011-flyway-mock-db-migrations.md) | Provision the mock query DB with Flyway migrations (`mock-db/migration/`), superseding 0004's init-SQL | accepted | 2026-08-12 |
+| [0012](0012-drop-deploy-mode.md) | Drop `DEPLOY_MODE`; set `/chat` rate limits directly via `RATE_LIMIT_PER_MIN`/`_PER_DAY` (supersedes 0010's preset) | accepted | 2026-08-13 |

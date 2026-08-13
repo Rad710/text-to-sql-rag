@@ -1,7 +1,13 @@
 ---
-status: accepted
+status: superseded
+superseded_by: 0012
 date: 2026-08-11
 ---
+
+> **Superseded by [0012](0012-drop-deploy-mode.md)** (2026-08-13): the `DEPLOY_MODE=demo|live` preset was
+> removed — its only effect was choosing rate-limit defaults, which reads as redundant next to `LLM_MODE`.
+> Per-user in-memory rate limiting (the substance of this record) is unchanged; the limits are now set
+> directly via `RATE_LIMIT_PER_MIN` / `RATE_LIMIT_PER_DAY`. Body kept immutable below.
 
 # 0010 — Per-user rate limiting + two deploy modes (demo / live)
 

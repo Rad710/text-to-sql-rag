@@ -119,7 +119,6 @@ def health() -> dict[str, str]:
         "status": "ok",
         "version": __version__,
         "llm_mode": s.llm_mode,
-        "deploy_mode": s.deploy_mode,
         "model": s.llm_model if s.llm_mode == "openai" else "mock",
     }
 
