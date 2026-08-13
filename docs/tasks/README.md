@@ -61,6 +61,7 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 | [0038](0038-drop-deploy-mode/) | **Drop `DEPLOY_MODE`** — remove the demo/live preset (its only job was rate-limit defaults, redundant next to `LLM_MODE`); set `/chat` limits directly via `RATE_LIMIT_PER_MIN`/`_PER_DAY` ([decision 0012](../decisions/0012-drop-deploy-mode.md), supersedes 0010) | done | — |
 | [0039](0039-hardened-auth-frontend-store/) | **Harden auth + frontend store** — short-lived access (in memory) + rotating/reuse-detected refresh token + strict CSP; replace the 3 global-mutable modules with a `zustand` session store; de-string-ify the runtime adapter ([decision 0013](../decisions/0013-hardened-bearer-jwt.md), supersedes 0009) | done | — |
 | [0040](0040-language-toggle-i18n/) | **Language toggle + i18n** — react-i18next ES/EN toggle (auto-detects machine language) replacing the bilingual UI; chrome language sent to `/chat` and drives the answer language ([decision 0014](../decisions/0014-ui-language-i18n.md)) | done | — |
+| [0041](0041-persist-tool-results/) | **Persist tool steps so reloaded conversations render** — save the `run_sql` call + structured result with each turn and rebuild the SQL step/table on reload (today old conversations show only prose); extends [decision 0006](../decisions/0006-structured-results-over-sse.md) | done | 0017, 0019 |
 
 ## Backlog — open, unscheduled
 

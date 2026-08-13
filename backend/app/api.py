@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import time
 from collections.abc import AsyncIterator
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 import pymysql
 from fastapi import Depends, FastAPI, HTTPException
@@ -130,6 +130,19 @@ def _sse(event: AgentEvent) -> str:
     return f"event: {event.type}\ndata: {json.dumps(event.data)}\n\n"
 
 
+def _persistable_result(data: dict[str, Any]) -> Any:
+    """The part of a ``tool_result`` worth saving: structured rows for ``run_sql`` (decision 0006),
+    else the short text preview. Never the raw model-facing text — no SQL/error internals leak."""
+    if isinstance(data.get("rows"), list):
+        return {
+            "columns": data.get("columns"),
+            "rows": data.get("rows"),
+            "row_count": data.get("row_count"),
+            "truncated": data.get("truncated"),
+        }
+    return data.get("preview")
+
+
 @app.post("/chat")
 async def chat(
     req: ChatRequest,
@@ -152,13 +165,25 @@ async def chat(
     async def event_stream() -> AsyncIterator[str]:
         yield _sse(AgentEvent("conversation", {"id": conversation_id}))
         answer = ""
+        # Accumulate tool steps as they stream so we persist them with the assistant turn; a reload
+        # then rebuilds the SQL step + result table, not just the prose (0041). tool_start and
+        # tool_result interleave in the loop, so each result attaches to the last step.
+        tool_data: list[dict[str, Any]] = []
         for event in stream(
             req.question, store=store, schema=schema, history=history, language=req.language
         ):
             if event.type == "answer":
                 answer = str(event.data.get("text") or "")
+            elif event.type == "tool_start":
+                tool_data.append(
+                    {"name": event.data.get("name"), "arguments": event.data.get("arguments") or {}}
+                )
+            elif event.type == "tool_result" and tool_data:
+                tool_data[-1]["result"] = _persistable_result(event.data)
             yield _sse(event)
-        message_id = await recorder.finish(conversation_id=conversation_id, answer=answer)
+        message_id = await recorder.finish(
+            conversation_id=conversation_id, answer=answer, tool_data=tool_data or None
+        )
         yield _sse(AgentEvent("message", {"id": message_id}))  # UI attaches feedback here (0020)
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")

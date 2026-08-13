@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel
@@ -28,6 +28,9 @@ class MessageOut(BaseModel):
     id: str
     role: str
     content: str
+    # The assistant turn's tool steps so the client rebuilds the SQL step + table (0041); null on
+    # user turns and pre-0041 messages.
+    tool_data: list[dict[str, Any]] | None = None
 
 
 class ConversationDetail(BaseModel):
@@ -55,7 +58,8 @@ async def get_conversation(
         id=conversation.id,
         title=conversation.title,
         messages=[
-            MessageOut(id=m.id, role=m.role, content=m.content) for m in conversation.messages
+            MessageOut(id=m.id, role=m.role, content=m.content, tool_data=m.tool_data)
+            for m in conversation.messages
         ],
     )
 

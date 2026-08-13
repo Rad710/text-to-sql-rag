@@ -66,6 +66,10 @@ test("full journey: register → ask → chart → feedback → multi-turn → r
     await expect(saved).toBeVisible();
     await saved.click();
     await expect(page.getByText("y por chofer?")).toBeVisible();
+    // task 0041: the reloaded turn rebuilds the SQL step + result table (from persisted tool_data),
+    // not just the prose — so a reopened conversation looks like it did live, not empty/broken.
+    await expect(page.getByText(/Consulté la base de datos/).first()).toBeVisible();
+    await expect(page.getByRole("table").first()).toBeVisible();
 });
 
 // Register validation (task 0023): a too-short password reaches the server, which returns 422; the SPA

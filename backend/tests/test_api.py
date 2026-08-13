@@ -28,7 +28,9 @@ class _NoopRecorder:
     async def start(self, *, user_id: str, conversation_id: str | None, question: str) -> str:
         return "conv-test"
 
-    async def finish(self, *, conversation_id: str, answer: str) -> str:
+    async def finish(
+        self, *, conversation_id: str, answer: str, tool_data: object | None = None
+    ) -> str:
         return "msg-test"
 
 
@@ -82,6 +84,56 @@ def test_chat_streams_sse_events(client: TestClient) -> None:
     assert "run_sql" in body
     assert "event: answer" in body
     assert "event: done" in body
+
+
+def test_persistable_result_keeps_structured_rows_else_preview() -> None:
+    """`_persistable_result` saves run_sql's structured rows (decision 0006), else a text preview —
+    never the raw model-facing text (task 0041)."""
+    structured = api._persistable_result(
+        {
+            "name": "run_sql",
+            "columns": ["route", "total"],
+            "rows": [["Encarnación", "100"]],
+            "row_count": 1,
+            "truncated": False,
+            "preview": "route | total ...",
+        }
+    )
+    assert structured == {
+        "columns": ["route", "total"],
+        "rows": [["Encarnación", "100"]],
+        "row_count": 1,
+        "truncated": False,
+    }
+    # No rows (search_schema, or a run_sql error) → just the short preview string.
+    assert (
+        api._persistable_result({"name": "search_schema", "preview": "route(...)"}) == "route(...)"
+    )
+
+
+def test_chat_persists_tool_steps_with_the_assistant_turn(client: TestClient) -> None:
+    """/chat hands the recorder the turn's tool steps so a reload can rebuild them (0041)."""
+    captured: dict[str, object] = {}
+
+    class _CapturingRecorder:
+        async def start(self, *, user_id: str, conversation_id: str | None, question: str) -> str:
+            return "conv-test"
+
+        async def finish(
+            self, *, conversation_id: str, answer: str, tool_data: object | None = None
+        ) -> str:
+            captured["tool_data"] = tool_data
+            return "msg-test"
+
+    app.dependency_overrides[get_recorder] = lambda: _CapturingRecorder()
+    resp = client.post("/chat", json={"question": "total freight revenue per route"})
+    assert resp.status_code == 200
+    steps = captured["tool_data"]
+    assert isinstance(steps, list) and steps  # the turn's tool steps were persisted
+    names = [s["name"] for s in steps]
+    assert "run_sql" in names  # the SQL step is saved so the reload can render it
+    for step in steps:
+        assert "arguments" in step and "result" in step  # enough to rebuild the collapsible step
 
 
 def test_chat_requires_question(client: TestClient) -> None:
