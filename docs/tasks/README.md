@@ -59,6 +59,7 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 | [0036](0036-run-sql-arg-alias/) | **`run_sql` arg alias** — accept `sql` as an alias for the `query` argument so local models (llama3.1) that misname it aren't rejected as "empty SQL"; frontend renders bare SQL either way | done | — |
 | [0037](0037-chitchat-prompt/) | **Chit-chat prompt cleanup** — reword the non-DB system-prompt rule to a single general instruction (no enumerated greetings). Reduces but can't fully stop `llama3.1:8b` from narrating its reasoning — a model limit, not wording | done | — |
 | [0038](0038-drop-deploy-mode/) | **Drop `DEPLOY_MODE`** — remove the demo/live preset (its only job was rate-limit defaults, redundant next to `LLM_MODE`); set `/chat` limits directly via `RATE_LIMIT_PER_MIN`/`_PER_DAY` ([decision 0012](../decisions/0012-drop-deploy-mode.md), supersedes 0010) | done | — |
+| [0039](0039-hardened-auth-frontend-store/) | **Harden auth + frontend store** — short-lived access (in memory) + rotating/reuse-detected refresh token + strict CSP; replace the 3 global-mutable modules with a `zustand` session store; de-string-ify the runtime adapter ([decision 0013](../decisions/0013-hardened-bearer-jwt.md), supersedes 0009) | done | — |
 
 ## Backlog — open, unscheduled
 
@@ -69,6 +70,16 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 
 ## Done
 
+- [0039](0039-hardened-auth-frontend-store/) — **harden auth + frontend store**: replaced the single
+  long-lived JWT in `localStorage` with a **short-lived access token (in memory) + a rotated,
+  reuse-detected refresh token** (new `refresh_tokens` table + `/auth/refresh` + `/auth/logout`;
+  `type`-claimed tokens so a refresh can't act as an access token) and a **strict same-origin CSP** in
+  nginx. Frontend: deleted the three global-mutable modules (`AuthProvider` context seam,
+  `active-conversation`, feedback id) for a `zustand` `useSession` store; one `apiFetch` attaches the
+  token and refreshes once on 401; `runtime.ts` no longer regex-strips a usage footer (answer + usage
+  are separate parts). Decision **0013** (supersedes 0009). Gates green: backend ruff/mypy/132 tests,
+  frontend biome/tsc/21 tests + production build; e2e unaffected. Owner applies the `.env.example`
+  token-TTL rename.
 - [0038](0038-drop-deploy-mode/) — **drop `DEPLOY_MODE`**: the `demo|live` knob only picked rate-limit
   defaults (+ a `/health` label), which read as redundant/misleading next to `LLM_MODE`. Removed it
   entirely — `config.py` (type + field + preset branching), the `/health` `deploy_mode` field, and both

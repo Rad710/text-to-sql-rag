@@ -1,43 +1,82 @@
 import { afterEach, expect, test, vi } from "vitest";
+import { login } from "@/api/auth";
+import { apiFetch } from "@/api/client";
+import { useSession } from "@/stores/session";
 
-import { fetchMe, isTokenExpired } from "@/api/auth";
-
-/** A JWT with the given `exp` (seconds); header/signature are irrelevant to the client-side check. */
-function jwt(expSeconds: number): string {
-    return `h.${btoa(JSON.stringify({ exp: expSeconds }))}.s`;
+function resetSession(): void {
+    useSession.setState({
+        accessToken: null,
+        refreshToken: null,
+        user: null,
+        status: "loading",
+        conversationId: null,
+        lastAssistantMessageId: null,
+    });
 }
-
-const now = () => Math.floor(Date.now() / 1000);
 
 afterEach(() => {
     vi.restoreAllMocks();
     localStorage.clear();
+    resetSession();
 });
 
-test("isTokenExpired: past exp → true, future exp → false", () => {
-    expect(isTokenExpired(jwt(now() - 60))).toBe(true);
-    expect(isTokenExpired(jwt(now() + 3600))).toBe(false);
-});
+function json(data: unknown, status = 200): Response {
+    return { ok: status < 400, status, json: async () => data } as unknown as Response;
+}
 
-test("isTokenExpired: an unparseable token → false (let the server decide)", () => {
-    expect(isTokenExpired("tok-abc")).toBe(false);
-    expect(isTokenExpired("a.b.c")).toBe(false);
-    expect(isTokenExpired("")).toBe(false);
-});
-
-test("fetchMe: an expired token resolves to null, clears the token, and makes no request", async () => {
-    localStorage.setItem("dyr_token", jwt(now() - 60));
-    const fetchMock = vi.fn();
+test("login stores the token pair + user and marks the session authenticated", async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url === "/auth/login") {
+            return Promise.resolve(json({ access_token: "acc-1", refresh_token: "ref-1" }));
+        }
+        return Promise.resolve(json({ id: "u1", email: "a@b.com", name: "Ana" })); // /auth/me
+    });
     vi.stubGlobal("fetch", fetchMock);
 
-    expect(await fetchMe()).toBeNull();
-    expect(fetchMock).not.toHaveBeenCalled(); // no /auth/me → no console 401
-    expect(localStorage.getItem("dyr_token")).toBeNull();
+    await login("a@b.com", "pw");
+
+    const s = useSession.getState();
+    expect(s.accessToken).toBe("acc-1");
+    expect(s.refreshToken).toBe("ref-1");
+    expect(s.user).toEqual({ id: "u1", email: "a@b.com", name: "Ana" });
+    expect(s.status).toBe("authenticated");
 });
 
-test("fetchMe: no token → null, no request", async () => {
-    const fetchMock = vi.fn();
+test("apiFetch refreshes once on a 401 and retries with the new access token", async () => {
+    useSession.setState({ accessToken: "stale", refreshToken: "ref-1" });
+    const seen: string[] = [];
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url === "/auth/refresh") {
+            return Promise.resolve(json({ access_token: "acc-2", refresh_token: "ref-2" }));
+        }
+        // The /me call: first attempt (stale token) 401s, the retry (acc-2) succeeds.
+        const auth = (init?.headers as Record<string, string> | undefined)?.Authorization;
+        seen.push(auth ?? "");
+        return Promise.resolve(auth === "Bearer acc-2" ? json({ ok: true }) : json({}, 401));
+    });
     vi.stubGlobal("fetch", fetchMock);
-    expect(await fetchMe()).toBeNull();
-    expect(fetchMock).not.toHaveBeenCalled();
+
+    const res = await apiFetch("/auth/me");
+
+    expect(res.ok).toBe(true);
+    expect(seen).toEqual(["Bearer stale", "Bearer acc-2"]); // refreshed + retried once
+    expect(useSession.getState().accessToken).toBe("acc-2");
+    expect(useSession.getState().refreshToken).toBe("ref-2");
+});
+
+test("apiFetch signs out when the refresh also fails", async () => {
+    useSession.setState({ accessToken: "stale", refreshToken: "ref-1", status: "authenticated" });
+    // Both the request and /auth/refresh 401.
+    const fetchMock = vi.fn(() => Promise.resolve(json({}, 401)));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await apiFetch("/conversations");
+
+    expect(res.status).toBe(401);
+    const s = useSession.getState();
+    expect(s.accessToken).toBeNull();
+    expect(s.refreshToken).toBeNull();
+    expect(s.status).toBe("anonymous");
 });

@@ -1,14 +1,12 @@
 import { type FC, type FormEvent, useState } from "react";
 
 import { login, register } from "@/api/auth";
-import { useAuth } from "@/hooks/useAuth";
 
 /**
- * The login / register form card (decision 0009). On success it calls `refresh()` so the auth context
- * picks up the new user; the LoginPage then redirects to `/`.
+ * The login / register form card (decisions 0009, 0013). On success `login`/`register` set the user in
+ * the session store, and the LoginPage redirects to `/`.
  */
 export const LoginForm: FC = () => {
-    const { refresh } = useAuth();
     const [mode, setMode] = useState<"login" | "register">("login");
     const [email, setEmail] = useState("");
     const [name, setName] = useState("");
@@ -28,7 +26,6 @@ export const LoginForm: FC = () => {
             } else {
                 await login(email, password);
             }
-            await refresh();
         } catch (err) {
             setError(err instanceof Error ? err.message : "No se pudo iniciar sesión");
         } finally {

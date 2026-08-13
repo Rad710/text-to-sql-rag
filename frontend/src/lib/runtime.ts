@@ -5,9 +5,8 @@ import type {
     ToolCallMessagePart,
 } from "@assistant-ui/react";
 
-import { getToken, notifyUnauthorized } from "@/api/auth";
-import { setLastAssistantMessageId } from "@/api/feedback";
-import { getConversationId, notifyConversation } from "./active-conversation";
+import { apiFetch } from "@/api/client";
+import { useSession } from "@/stores/session";
 
 /** Join a message's text parts (ignoring tool-call/other parts) into a plain string. */
 function messageText(message: ThreadMessage): string {
@@ -15,6 +14,18 @@ function messageText(message: ThreadMessage): string {
         .map((part) => (part.type === "text" ? part.text : ""))
         .join(" ")
         .trim();
+}
+
+/**
+ * The text of a prior turn for backend context. A live assistant turn carries a trailing **usage**
+ * text part (steps · tokens · cost) on top of its answer part; that's UI chrome, not conversation, so
+ * we drop it. Structural, not a regex: we only ever emit one answer part + one optional usage part, so
+ * an assistant message with >1 text part has the usage footer last.
+ */
+function historyText(message: ThreadMessage): string {
+    const texts = message.content.flatMap((part) => (part.type === "text" ? [part.text] : []));
+    if (message.role === "assistant" && texts.length > 1) texts.pop();
+    return texts.join(" ").trim();
 }
 
 // One Server-Sent Event from our FastAPI /chat stream.
@@ -46,44 +57,36 @@ async function* parseSSE(body: ReadableStream<Uint8Array>): AsyncGenerator<SSEEv
 }
 
 /**
- * assistant-ui local runtime adapter: POST the question to /chat and translate our SSE events
- * into assistant-ui **message parts** so the agent's work renders natively — each `search_schema`
- * / `run_sql` call becomes a **tool-call part** (a collapsible step showing the SQL and its result),
- * followed by the answer and a token/cost footer. This is the tool-call rendering
- * [decision 0005](../../docs/decisions/0005-custom-fastapi-sse-react-frontend.md) called for; the
- * styled Thread's `ToolFallback`/`ToolGroup` render the parts.
+ * assistant-ui local runtime adapter: POST the question to /chat and translate our SSE events into
+ * assistant-ui **message parts** so the agent's work renders natively — each `search_schema` /
+ * `run_sql` call becomes a **tool-call part** (a collapsible step showing the SQL and its result),
+ * followed by the answer and a token/cost usage part. Auth (and refresh-on-401) is handled by
+ * `apiFetch`; conversation + feedback ids flow through the `useSession` store.
  */
 export const adapter: ChatModelAdapter = {
     async *run({ messages, abortSignal }) {
         const question = messageText(messages[messages.length - 1]);
-        // Prior turns (text only) so the backend can give the model conversational context (task 0016).
+        // Prior turns (text only) give the backend conversational context (task 0016).
         const history = messages
             .slice(0, -1)
             .filter((m) => m.role === "user" || m.role === "assistant")
-            .map((m) => ({
-                role: m.role,
-                // Drop the UI-only token/cost footer from assistant turns — it's chrome, not conversation.
-                content: messageText(m)
-                    .replace(/\n*`[^`\n]*·[^`\n]*`\s*$/, "")
-                    .trim(),
-            }))
+            .map((m) => ({ role: m.role, content: historyText(m) }))
             .filter((turn) => turn.content);
 
-        const token = getToken();
-        const res = await fetch("/chat", {
+        const res = await apiFetch("/chat", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            },
-            body: JSON.stringify({ question, history, conversation_id: getConversationId() }),
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                question,
+                history,
+                conversation_id: useSession.getState().conversationId,
+            }),
             signal: abortSignal,
         });
+
         if (!res.ok || !res.body) {
-            // Session expired / not authenticated: clear the token and bounce back to login (don't leave a
-            // raw "401" in the thread).
+            // apiFetch already tried to refresh and signed out on a hard 401 → the session expired.
             if (res.status === 401) {
-                notifyUnauthorized();
                 yield {
                     content: [
                         { type: "text", text: "⚠️ Tu sesión expiró. Iniciá sesión de nuevo." },
@@ -91,8 +94,8 @@ export const adapter: ChatModelAdapter = {
                 };
                 return;
             }
-            // Rate limited (decision 0010): the backend detail is the reason; we own the retry hint. Short
-            // waits (the per-minute limit) show seconds; the long daily-cap wait just says "más tarde".
+            // Rate limited (decision 0010): the backend detail is the reason; we own the retry hint.
+            // Short waits (the per-minute limit) show seconds; the long daily-cap wait says "más tarde".
             if (res.status === 429) {
                 const retry = Number(res.headers.get("Retry-After"));
                 const hint =
@@ -166,18 +169,19 @@ export const adapter: ChatModelAdapter = {
                 const cost = Number(d.cost_usd ?? 0).toFixed(4);
                 usage = `\`${d.iterations} steps · ${d.total_tokens} tokens · $${cost}\``;
             } else if (evt.type === "conversation") {
-                notifyConversation(String(evt.data.id)); // task 0019 — remember which conversation this is
+                useSession.getState().setConversationId(String(evt.data.id)); // task 0019
                 continue;
             } else if (evt.type === "message") {
-                setLastAssistantMessageId(String(evt.data.id)); // task 0020 — feedback targets this message
+                useSession.getState().setLastAssistantMessageId(String(evt.data.id)); // task 0020
                 continue;
             } else {
                 continue; // e.g. "done"
             }
 
+            // Answer and usage are separate parts (no concatenation) — historyText drops the usage one.
             const content: ThreadAssistantMessagePart[] = [...tools];
-            const trailing = [answer, usage].filter(Boolean).join("\n\n");
-            if (trailing) content.push({ type: "text", text: trailing });
+            if (answer) content.push({ type: "text", text: answer });
+            if (usage) content.push({ type: "text", text: usage });
             yield { content };
         }
     },

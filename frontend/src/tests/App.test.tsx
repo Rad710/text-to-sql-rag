@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
 
 import App from "@/App";
+import { useSession } from "@/stores/session";
 
 /** Fake /chat Response whose body streams the given SSE frames. */
 function sseResponse(frames: string[]): Response {
@@ -35,6 +36,14 @@ const SSE_FRAMES = [
 afterEach(() => {
     vi.restoreAllMocks();
     localStorage.clear();
+    useSession.setState({
+        accessToken: null,
+        refreshToken: null,
+        user: null,
+        status: "loading",
+        conversationId: null,
+        lastAssistantMessageId: null,
+    });
 });
 
 // Mount-crash guard (assistant-ui's runtime threw on mount under React 19, which tsc/build missed).
@@ -51,9 +60,13 @@ test("mounts without crashing and shows the login screen when unauthenticated", 
 // /chat with the Bearer token; SSE tool events map to a collapsible step group (0005), run_sql's rows
 // render as a real table (0006), and the answer + usage follow.
 test("authenticated: renders tool steps + result table + answer, and sends the Bearer token", async () => {
-    localStorage.setItem("dyr_token", "tok-abc");
+    // A returning user: a persisted refresh token is exchanged (bootstrap) for an access token.
+    useSession.setState({ refreshToken: "ref-1" });
     const fetchMock = vi.fn((input: RequestInfo | URL, _init?: RequestInit) => {
         const url = String(input);
+        if (url === "/auth/refresh") {
+            return Promise.resolve(jsonResponse({ access_token: "acc-1", refresh_token: "ref-2" }));
+        }
         if (url === "/auth/me") {
             return Promise.resolve(jsonResponse({ id: "u1", email: "a@b.com", name: "Ana" }));
         }
@@ -94,7 +107,7 @@ test("authenticated: renders tool steps + result table + answer, and sends the B
     const chatCall = fetchMock.mock.calls.find((c) => String(c[0]) === "/chat");
     expect(chatCall).toBeDefined();
     const init = chatCall?.[1] as RequestInit;
-    expect((init.headers as Record<string, string>).Authorization).toBe("Bearer tok-abc");
+    expect((init.headers as Record<string, string>).Authorization).toBe("Bearer acc-1");
     const body = JSON.parse(init.body as string);
     expect(body.question).toMatch(/facturación total por ruta/);
     expect(body.history).toEqual([]);

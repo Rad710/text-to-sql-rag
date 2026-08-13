@@ -25,10 +25,11 @@ async def get_current_user(
     if credentials is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "not authenticated")
     try:
-        user_id = decode_token(credentials.credentials)
+        # Require an *access* token — a refresh token presented as a Bearer credential is rejected.
+        claims = decode_token(credentials.credentials, "access")
     except jwt.InvalidTokenError:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid token") from None
-    user = await get_user(session, user_id)
+    user = await get_user(session, claims.subject)
     if user is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "user not found")
     return user

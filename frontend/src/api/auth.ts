@@ -1,55 +1,15 @@
-// Auth client (decision 0009): JWT stored in localStorage, sent as `Authorization: Bearer …`.
-// The token lives here (not in React state) so the assistant-ui runtime adapter can read it at
-// request time without prop-drilling.
+// Auth client (decisions 0009, 0013). Login/register receive an access + refresh pair; the access
+// token is held in memory and the refresh token persisted, both in the session store. There is no
+// token plumbing in components — apiFetch attaches the token and refreshes it on demand.
 
-const TOKEN_KEY = "dyr_token";
+import { apiFetch, tryRefresh } from "@/api/client";
+import { type AuthUser, useSession } from "@/stores/session";
 
-export type AuthUser = { id: string; email: string; name: string };
+export type { AuthUser };
 
-export function getToken(): string | null {
-    return localStorage.getItem(TOKEN_KEY);
-}
+type TokenPair = { access_token: string; refresh_token: string };
 
-function setToken(token: string): void {
-    localStorage.setItem(TOKEN_KEY, token);
-}
-
-export function clearToken(): void {
-    localStorage.removeItem(TOKEN_KEY);
-}
-
-// Seam so a 401 during a request (e.g. the token expired mid-session) can bounce the user back to the
-// login screen. The runtime adapter calls notifyUnauthorized(); App registers the handler.
-let unauthorizedHandler: (() => void) | null = null;
-
-export function onUnauthorized(handler: (() => void) | null): void {
-    unauthorizedHandler = handler;
-}
-
-export function notifyUnauthorized(): void {
-    clearToken();
-    unauthorizedHandler?.();
-}
-
-/**
- * True only when the JWT is definitely past its `exp`. Used to skip the `/auth/me` probe for an
- * expired token — otherwise the browser logs a (harmless but noisy) 401 on every load for a returning
- * user whose token lapsed. A token we can't parse returns `false`: we don't guess, we let the server
- * decide (keeps the check conservative and unit-testable without a real JWT).
- */
-export function isTokenExpired(token: string): boolean {
-    const payload = token.split(".")[1];
-    if (!payload) return false;
-    try {
-        const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
-        const exp = (JSON.parse(json) as { exp?: number }).exp;
-        return typeof exp === "number" && exp * 1000 <= Date.now();
-    } catch {
-        return false;
-    }
-}
-
-async function postAuth(path: string, body: Record<string, string>): Promise<Response> {
+async function postJson(path: string, body: Record<string, string>): Promise<Response> {
     return fetch(path, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -57,18 +17,24 @@ async function postAuth(path: string, body: Record<string, string>): Promise<Res
     });
 }
 
+async function completeSignIn(res: Response): Promise<void> {
+    const { access_token, refresh_token } = (await res.json()) as TokenPair;
+    useSession.getState().setTokens(access_token, refresh_token);
+    useSession.getState().setUser(await fetchMe());
+}
+
 export async function login(email: string, password: string): Promise<void> {
-    const res = await postAuth("/auth/login", { email, password });
+    const res = await postJson("/auth/login", { email, password });
     if (!res.ok) {
         throw new Error(
             res.status === 401 ? "Email o contraseña incorrectos" : `Error ${res.status}`,
         );
     }
-    setToken(((await res.json()) as { access_token: string }).access_token);
+    await completeSignIn(res);
 }
 
 export async function register(email: string, name: string, password: string): Promise<void> {
-    const res = await postAuth("/auth/register", { email, name, password });
+    const res = await postJson("/auth/register", { email, name, password });
     if (!res.ok) {
         if (res.status === 409) throw new Error("Ese email ya está registrado");
         // 422 = the API rejected the email format or the password length (min 8).
@@ -76,22 +42,38 @@ export async function register(email: string, name: string, password: string): P
             throw new Error("Revisá el email y que la contraseña tenga al menos 8 caracteres");
         throw new Error(`Error ${res.status}`);
     }
-    setToken(((await res.json()) as { access_token: string }).access_token);
+    await completeSignIn(res);
 }
 
-/** Resolve the current user from the stored token, or null if unauthenticated/expired. */
+/** Revoke the refresh token server-side (best-effort) and clear the local session. */
+export async function logout(): Promise<void> {
+    const { refreshToken } = useSession.getState();
+    if (refreshToken) {
+        try {
+            await postJson("/auth/logout", { refresh_token: refreshToken });
+        } catch {
+            // Network hiccup on logout: still clear the client session below.
+        }
+    }
+    useSession.getState().signOut();
+}
+
+/** Resolve the current user for the active session, or null if unauthenticated. */
 export async function fetchMe(): Promise<AuthUser | null> {
-    const token = getToken();
-    if (!token) return null;
-    // Skip the round-trip (and its console 401) if the token is already expired.
-    if (isTokenExpired(token)) {
-        clearToken();
-        return null;
+    const res = await apiFetch("/auth/me");
+    return res.ok ? ((await res.json()) as AuthUser) : null;
+}
+
+/** On app load: if a refresh token survived, rotate it into an access token and load the user. */
+export async function bootstrapSession(): Promise<void> {
+    const store = useSession.getState();
+    if (!store.refreshToken) {
+        store.setStatus("anonymous");
+        return;
     }
-    const res = await fetch("/auth/me", { headers: { Authorization: `Bearer ${token}` } });
-    if (!res.ok) {
-        clearToken();
-        return null;
+    if (!(await tryRefresh())) {
+        store.signOut();
+        return;
     }
-    return (await res.json()) as AuthUser;
+    store.setUser(await fetchMe());
 }

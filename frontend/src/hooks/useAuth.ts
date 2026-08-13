@@ -1,12 +1,9 @@
-import { useContext } from "react";
+import { logout } from "@/api/auth";
+import { useSession } from "@/stores/session";
 
-import { AuthContext } from "@/context/AuthProvider";
-
-/** Access the auth session. Must be used within an <AuthProvider>. */
+/** The auth session for components: the current user, whether it's still resolving, and logout. */
 export function useAuth() {
-    const ctx = useContext(AuthContext);
-    if (!ctx) {
-        throw new Error("useAuth must be used within an AuthProvider");
-    }
-    return ctx;
+    const user = useSession((s) => s.user);
+    const status = useSession((s) => s.status);
+    return { user, loading: status === "loading", logout };
 }

@@ -1,7 +1,13 @@
 ---
-status: accepted
+status: superseded
+superseded_by: 0013
 date: 2026-08-11
 ---
+
+> **Superseded by [0013](0013-hardened-bearer-jwt.md)** (2026-08-13): still JWT bearer auth, but
+> hardened — a **short-lived access token (in memory), a rotated + reuse-detected refresh token**, and
+> a strict CSP, replacing the single long-lived token in `localStorage`. The identity model (bcrypt +
+> signed JWT over the Postgres store) is unchanged. Body kept immutable below.
 
 # 0009 — Authentication via JWT bearer tokens
 

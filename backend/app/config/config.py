@@ -66,10 +66,12 @@ class Settings:
     app_db_password: str = "app"
     app_db_name: str = "dyr_app"
 
-    # Auth (decision 0009) — JWT signing. Secret MUST be overridden in any real deploy.
+    # Auth (decisions 0009, 0013) — JWT signing. Secret MUST be overridden in any real deploy.
+    # Short-lived access token + a longer refresh token (rotated + reuse-detected, decision 0013).
     jwt_secret: str = "dev-insecure-secret-change-me-in-production-0123456789"
     jwt_algorithm: str = "HS256"
-    jwt_expiry_min: int = 60 * 24  # 1 day
+    jwt_access_expiry_min: int = 15
+    jwt_refresh_expiry_days: int = 14
 
     # Per-user rate limit on /chat (keyed by JWT subject; decisions 0010, 0012). Set both explicitly
     # in the environment for a real deploy (e.g. 20/min + a 100/day cost ceiling).
@@ -127,7 +129,8 @@ def get_settings() -> Settings:
         # Dev default is ≥32 bytes (PyJWT warns below that for HS256); a real deploy overrides it.
         jwt_secret=_get("JWT_SECRET", "dev-insecure-secret-change-me-in-production-0123456789"),
         jwt_algorithm=_get("JWT_ALGORITHM", "HS256"),
-        jwt_expiry_min=_get_int("JWT_EXPIRY_MIN", 60 * 24),
+        jwt_access_expiry_min=_get_int("JWT_ACCESS_EXPIRY_MIN", 15),
+        jwt_refresh_expiry_days=_get_int("JWT_REFRESH_EXPIRY_DAYS", 14),
         result_limit=_get_int("RESULT_LIMIT", 500),
         agent_max_iterations=_get_int("AGENT_MAX_ITERATIONS", 6),
         statement_timeout_ms=_get_int("STATEMENT_TIMEOUT_MS", 5000),

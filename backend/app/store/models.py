@@ -9,7 +9,7 @@ from __future__ import annotations
 import datetime as dt
 import uuid
 
-from sqlalchemy import ForeignKey, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, String, Text, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -33,6 +33,20 @@ class User(Base):
     conversations: Mapped[list[Conversation]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
+
+
+class RefreshToken(Base):
+    """A rotatable refresh-token record (decision 0013). One row per issued refresh token, keyed by
+    its `jti`. Rotation sets `revoked_at`; presenting an already-revoked `jti` is reuse → the whole
+    user's tokens are revoked (see `auth.service.rotate_tokens`)."""
+
+    __tablename__ = "refresh_tokens"
+
+    jti: Mapped[str] = mapped_column(String(36), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    expires_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+    created_at: Mapped[dt.datetime] = mapped_column(server_default=func.now())
 
 
 class Conversation(Base):

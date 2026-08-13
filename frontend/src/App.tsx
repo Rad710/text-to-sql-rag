@@ -1,18 +1,21 @@
+import { useEffect } from "react";
 import { BrowserRouter } from "react-router";
 
+import { bootstrapSession } from "@/api/auth";
 import { AppRoutes } from "@/components/AppRoutes";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider } from "@/context/AuthProvider";
 
-/** App shell: router + global providers. Routes and screens live under pages/ and components/. */
+/** App shell: router + providers. Session lives in the `useSession` store; bootstrap runs once here. */
 export default function App() {
+    useEffect(() => {
+        void bootstrapSession();
+    }, []);
+
     return (
         <BrowserRouter>
-            <AuthProvider>
-                <TooltipProvider>
-                    <AppRoutes />
-                </TooltipProvider>
-            </AuthProvider>
+            <TooltipProvider>
+                <AppRoutes />
+            </TooltipProvider>
         </BrowserRouter>
     );
 }

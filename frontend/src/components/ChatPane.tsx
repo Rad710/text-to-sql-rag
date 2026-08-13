@@ -5,11 +5,12 @@ import {
 } from "@assistant-ui/react";
 import type { FC } from "react";
 
-import { getLastAssistantMessageId, submitFeedback } from "@/api/feedback";
+import { submitFeedback } from "@/api/feedback";
 import { Thread } from "@/components/assistant-ui/thread";
 import { OpenToolGroup, ToolRenderer } from "@/components/RunSqlTool";
 import { Welcome } from "@/components/Welcome";
 import { adapter } from "@/lib/runtime";
+import { useSession } from "@/stores/session";
 
 /**
  * A fresh local runtime seeded with a conversation's prior messages. Remounted (via `key`) when the
@@ -22,7 +23,7 @@ export const ChatPane: FC<{ initialMessages: ThreadMessageLike[] }> = ({ initial
             // Thumbs on the latest answer (the action bar autohides on older ones) → POST /feedback (0020).
             feedback: {
                 submit: ({ type }) => {
-                    const id = getLastAssistantMessageId();
+                    const id = useSession.getState().lastAssistantMessageId;
                     if (id) void submitFeedback(id, type === "positive" ? 1 : -1);
                 },
             },

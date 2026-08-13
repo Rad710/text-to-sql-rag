@@ -7,12 +7,11 @@ import {
     getConversationMessages,
     listConversations,
 } from "@/api/conversations";
-import { setLastAssistantMessageId } from "@/api/feedback";
 import { ChatPane } from "@/components/ChatPane";
 import { ConversationSidebar } from "@/components/ConversationSidebar";
 import { useAuth } from "@/hooks/useAuth";
 import { useServerMode } from "@/hooks/useServerMode";
-import { onConversationStarted, setConversationId } from "@/lib/active-conversation";
+import { useSession } from "@/stores/session";
 
 /** / — the authenticated chat app: header + conversation sidebar (drawer on mobile) + the chat pane. */
 export function ChatPage() {
@@ -25,26 +24,29 @@ export function ChatPage() {
     const [paneKey, setPaneKey] = useState(0); // bumped only to remount ChatPane (switch/new)
     const [sidebarOpen, setSidebarOpen] = useState(false); // mobile drawer (task 0026)
 
+    // When a turn (re)identifies its conversation (the runtime writes it to the store), highlight it
+    // and refresh the list — no remount. Reactive via the store, not a hand-rolled callback registry.
+    const conversationId = useSession((s) => s.conversationId);
+
     const refreshList = useCallback(async () => {
         setConversations(await listConversations());
     }, []);
 
     useEffect(() => {
-        // Fresh session: start with no active conversation / feedback target until one is opened or started.
-        setConversationId(null);
-        setLastAssistantMessageId(null);
+        // Fresh session: no active conversation / feedback target until one is opened or started.
+        useSession.getState().resetConversation();
         void refreshList();
-        // When a turn (re)identifies its conversation, highlight it + refresh the list — no remount.
-        onConversationStarted((id) => {
-            setActiveId(id);
-            void refreshList();
-        });
-        return () => onConversationStarted(null);
     }, [refreshList]);
 
+    useEffect(() => {
+        if (conversationId) {
+            setActiveId(conversationId);
+            void refreshList();
+        }
+    }, [conversationId, refreshList]);
+
     const startNew = useCallback(() => {
-        setConversationId(null);
-        setLastAssistantMessageId(null);
+        useSession.getState().resetConversation();
         setInitialMessages([]);
         setActiveId(null);
         setPaneKey((k) => k + 1);
@@ -53,6 +55,7 @@ export function ChatPage() {
 
     const openConversation = useCallback(async (id: string) => {
         const messages = await getConversationMessages(id);
+        const { setConversationId, setLastAssistantMessageId } = useSession.getState();
         setConversationId(id);
         // The latest answer (the only one showing an action bar) is what feedback targets on reload.
         const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");

@@ -1,16 +1,16 @@
-"""Auth endpoints: register, login (both issue a JWT), and the current-user probe (0009)."""
+"""Auth endpoints (decisions 0009, 0013): register/login issue an access + refresh pair; refresh
+rotates them (reuse-detected); logout revokes; `/me` is the current-user probe."""
 
 from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import service
 from app.auth.deps import get_current_user
-from app.auth.security import create_access_token
 from app.store.engine import get_session
 from app.store.models import User
 
@@ -32,8 +32,13 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class RefreshRequest(BaseModel):
+    refresh_token: str
+
+
 class TokenResponse(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
 
 
@@ -51,7 +56,8 @@ async def register(req: RegisterRequest, session: Session) -> TokenResponse:
         )
     except service.EmailTakenError:
         raise HTTPException(status.HTTP_409_CONFLICT, "email already registered") from None
-    return TokenResponse(access_token=create_access_token(user.id))
+    access, refresh = await service.issue_tokens(session, user.id)
+    return TokenResponse(access_token=access, refresh_token=refresh)
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -59,7 +65,26 @@ async def login(req: LoginRequest, session: Session) -> TokenResponse:
     user = await service.authenticate(session, email=req.email, password=req.password)
     if user is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid credentials")
-    return TokenResponse(access_token=create_access_token(user.id))
+    access, refresh = await service.issue_tokens(session, user.id)
+    return TokenResponse(access_token=access, refresh_token=refresh)
+
+
+@router.post("/refresh", response_model=TokenResponse)
+async def refresh(req: RefreshRequest, session: Session) -> TokenResponse:
+    try:
+        access, new_refresh = await service.rotate_tokens(session, req.refresh_token)
+    except service.ReuseDetectedError:
+        # A rotated-away token was replayed; the family is now revoked. Force a fresh login.
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "refresh token reuse detected") from None
+    except service.InvalidRefreshTokenError:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid refresh token") from None
+    return TokenResponse(access_token=access, refresh_token=new_refresh)
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+async def logout(req: RefreshRequest, session: Session) -> Response:
+    await service.revoke(session, req.refresh_token)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/me", response_model=UserResponse)
