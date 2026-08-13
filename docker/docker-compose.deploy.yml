@@ -1,0 +1,119 @@
+# Pull-only production deploy for a single host, fronted by a Cloudflare Tunnel (decision 0013 era).
+# No inbound ports are published — cloudflared dials OUT to Cloudflare and reaches the web container on
+# the internal network, so the origin IP stays hidden and the host firewall only needs SSH.
+#
+# On the VM, put this file next to a `mock-db/migration/` folder (the 3 Flyway SQL files) and a `.env`,
+# then:  docker compose --env-file .env -f docker-compose.deploy.yml up -d
+name: text-to-sql-rag
+services:
+  web:
+    image: ghcr.io/rad710/text-to-sql-rag/web:${IMAGE_TAG:-latest}
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: unless-stopped
+
+  app:
+    image: ghcr.io/rad710/text-to-sql-rag/app:${IMAGE_TAG:-latest}
+    expose:
+      - "8000"
+    environment:
+      LLM_MODE: ${LLM_MODE:-mock}
+      LLM_BASE_URL: ${LLM_BASE_URL:-http://localhost:11434/v1}
+      LLM_MODEL: ${LLM_MODEL:-gpt-4o-mini}
+      LLM_API_KEY: ${LLM_API_KEY:-not-needed}
+      RATE_LIMIT_PER_MIN: ${RATE_LIMIT_PER_MIN:-60}
+      RATE_LIMIT_PER_DAY: ${RATE_LIMIT_PER_DAY:-0}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env (32+ bytes)}
+      # DB hosts default to the compose service names — do NOT set QUERY_DB_HOST/APP_DB_HOST in .env here.
+      QUERY_DB_HOST: mysql
+      QUERY_DB_PORT: "3306"
+      QUERY_DB_USER: ${QUERY_DB_USER:-llm_readonly}
+      QUERY_DB_PASSWORD: ${QUERY_DB_PASSWORD:?set QUERY_DB_PASSWORD in .env}
+      QUERY_DB_NAME: ${QUERY_DB_NAME:-dyrtransportes}
+      APP_DB_HOST: postgres
+      APP_DB_PORT: "5432"
+      APP_DB_USER: ${APP_DB_USER:-app}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:-app}
+      APP_DB_NAME: ${APP_DB_NAME:-dyr_app}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      flyway:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+    volumes:
+      - chroma:/app/.chroma
+
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: ${QUERY_DB_ROOT_PASSWORD:?set QUERY_DB_ROOT_PASSWORD in .env}
+      MYSQL_DATABASE: ${QUERY_DB_NAME:-dyrtransportes}
+    volumes:
+      - mysqldata:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  # One-shot: migrate + seed the mock query DB, then exit. Needs the SQL files copied next to this file.
+  flyway:
+    image: flyway/flyway:11
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      FLYWAY_URL: jdbc:mysql://mysql:3306/${QUERY_DB_NAME:-dyrtransportes}?allowPublicKeyRetrieval=true&useSSL=false
+      FLYWAY_USER: root
+      FLYWAY_PASSWORD: ${QUERY_DB_ROOT_PASSWORD:?set QUERY_DB_ROOT_PASSWORD in .env}
+      FLYWAY_LOCATIONS: filesystem:/flyway/sql
+      FLYWAY_CONNECT_RETRIES: "60"
+      FLYWAY_PLACEHOLDERS_DB_PASSWORD: ${QUERY_DB_PASSWORD:?set QUERY_DB_PASSWORD in .env}
+    command: migrate
+    volumes:
+      - ./mock-db/migration:/flyway/sql:ro
+    restart: "no"
+
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: ${APP_DB_USER:-app}
+      POSTGRES_PASSWORD: ${APP_DB_PASSWORD:-app}
+      POSTGRES_DB: ${APP_DB_NAME:-dyr_app}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${APP_DB_USER:-app} -d ${APP_DB_NAME:-dyr_app}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
+  # Cloudflare Tunnel: dials out, routes the public hostname → web:80. No inbound ports on the host.
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CF_TUNNEL_TOKEN:?set CF_TUNNEL_TOKEN in .env (from the Cloudflare dashboard)}
+    depends_on:
+      web:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  mysqldata:
+  chroma:
