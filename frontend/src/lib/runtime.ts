@@ -81,7 +81,7 @@ export const adapter: ChatModelAdapter = {
                 question,
                 history,
                 conversation_id: useSession.getState().conversationId,
-                language: i18n.resolvedLanguage ?? "es", // drives the answer language (task 0040)
+                language: i18n.resolvedLanguage ?? "en", // drives the answer language (task 0040)
             }),
             signal: abortSignal,
         });
