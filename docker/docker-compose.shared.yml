@@ -1,0 +1,113 @@
+# Variant of docker-compose.deploy.yml that uses the SHARED MySQL (platform stack)
+# instead of a per-app MySQL — frees ~450 MB on the VM. The query DB is synthetic and
+# Flyway-seeded, so cutting over loses nothing; the Postgres app store is unchanged.
+#
+# Requires the `platform` stack running (creates the `shared-db` network + `dyr_ai` DB).
+# In .env set QUERY_DB_ROOT_PASSWORD == the platform's MYSQL_ROOT_PASSWORD, and
+# QUERY_DB_PASSWORD == the platform's QUERY_DB_PASSWORD (the llm_readonly password).
+#
+#   docker compose --env-file .env -f docker-compose.shared.yml up -d
+name: text-to-sql-rag
+
+services:
+  web:
+    image: ghcr.io/rad710/text-to-sql-rag/web:${IMAGE_TAG:-latest}
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: unless-stopped
+
+  app:
+    image: ghcr.io/rad710/text-to-sql-rag/app:${IMAGE_TAG:-latest}
+    expose:
+      - "8000"
+    environment:
+      LLM_MODE: ${LLM_MODE:-mock}
+      LLM_BASE_URL: ${LLM_BASE_URL:-http://localhost:11434/v1}
+      LLM_MODEL: ${LLM_MODEL:-gpt-4o-mini}
+      LLM_API_KEY: ${LLM_API_KEY:-not-needed}
+      RATE_LIMIT_PER_MIN: ${RATE_LIMIT_PER_MIN:-60}
+      RATE_LIMIT_PER_DAY: ${RATE_LIMIT_PER_DAY:-0}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env (32+ bytes)}
+      # query DB → the shared MySQL, database dyr_ai, read-only user
+      QUERY_DB_HOST: mysql-shared
+      QUERY_DB_PORT: "3306"
+      QUERY_DB_USER: ${QUERY_DB_USER:-llm_readonly}
+      QUERY_DB_PASSWORD: ${QUERY_DB_PASSWORD:?set QUERY_DB_PASSWORD in .env (== platform)}
+      QUERY_DB_NAME: dyr_ai
+      # app store → local Postgres (unchanged)
+      APP_DB_HOST: postgres
+      APP_DB_PORT: "5432"
+      APP_DB_USER: ${APP_DB_USER:-app}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:-app}
+      APP_DB_NAME: ${APP_DB_NAME:-dyr_app}
+    depends_on:
+      flyway:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+    volumes:
+      - chroma:/app/.chroma
+    networks:
+      - default
+      - shared-db
+
+  # One-shot: migrate + seed the synthetic query DB in the shared MySQL (dyr_ai), then exit.
+  flyway:
+    image: flyway/flyway:11
+    environment:
+      FLYWAY_URL: jdbc:mysql://mysql-shared:3306/dyr_ai?allowPublicKeyRetrieval=true&useSSL=false
+      FLYWAY_USER: root
+      FLYWAY_PASSWORD: ${QUERY_DB_ROOT_PASSWORD:?set QUERY_DB_ROOT_PASSWORD in .env (== platform MYSQL_ROOT_PASSWORD)}
+      FLYWAY_LOCATIONS: filesystem:/flyway/sql
+      FLYWAY_CONNECT_RETRIES: "60"
+      FLYWAY_PLACEHOLDERS_DB_PASSWORD: ${QUERY_DB_PASSWORD:?set QUERY_DB_PASSWORD in .env}
+    command: migrate
+    volumes:
+      - ./mock-db/migration:/flyway/sql:ro
+    restart: "no"
+    networks:
+      - default
+      - shared-db
+
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: ${APP_DB_USER:-app}
+      POSTGRES_PASSWORD: ${APP_DB_PASSWORD:-app}
+      POSTGRES_DB: ${APP_DB_NAME:-dyr_app}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${APP_DB_USER:-app} -d ${APP_DB_NAME:-dyr_app}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CF_TUNNEL_TOKEN:?set CF_TUNNEL_TOKEN in .env}
+    depends_on:
+      web:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  chroma:
+
+networks:
+  default:
+  shared-db:
+    external: true
