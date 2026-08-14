@@ -29,12 +29,12 @@ services:
       RATE_LIMIT_PER_MIN: ${RATE_LIMIT_PER_MIN:-60}
       RATE_LIMIT_PER_DAY: ${RATE_LIMIT_PER_DAY:-0}
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env (32+ bytes)}
-      # query DB → the shared MySQL, database dyr_ai, read-only user
+      # query DB → the shared MySQL, database dyrtransportes, read-only user
       QUERY_DB_HOST: mysql-shared
       QUERY_DB_PORT: "3306"
       QUERY_DB_USER: ${QUERY_DB_USER:-llm_readonly}
       QUERY_DB_PASSWORD: ${QUERY_DB_PASSWORD:?set QUERY_DB_PASSWORD in .env (== platform)}
-      QUERY_DB_NAME: dyr_ai
+      QUERY_DB_NAME: dyrtransportes
       # app store → local Postgres (unchanged)
       APP_DB_HOST: postgres
       APP_DB_PORT: "5432"
@@ -59,11 +59,11 @@ services:
       - default
       - shared-db
 
-  # One-shot: migrate + seed the synthetic query DB in the shared MySQL (dyr_ai), then exit.
+  # One-shot: migrate + seed the synthetic query DB in the shared MySQL (dyrtransportes), then exit.
   flyway:
     image: flyway/flyway:11
     environment:
-      FLYWAY_URL: jdbc:mysql://mysql-shared:3306/dyr_ai?allowPublicKeyRetrieval=true&useSSL=false
+      FLYWAY_URL: jdbc:mysql://mysql-shared:3306/dyrtransportes?allowPublicKeyRetrieval=true&useSSL=false
       FLYWAY_USER: root
       FLYWAY_PASSWORD: ${QUERY_DB_ROOT_PASSWORD:?set QUERY_DB_ROOT_PASSWORD in .env (== platform MYSQL_ROOT_PASSWORD)}
       FLYWAY_LOCATIONS: filesystem:/flyway/sql
