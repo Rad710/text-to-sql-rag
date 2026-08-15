@@ -47,3 +47,26 @@ ends — the thinking behind the spec. Keeps [`README.md`](README.md) clean.
   - `flyway/flyway:11` → 13 ([decision 0011](../../decisions/0011-flyway-mock-db-migrations.md)).
 
   Flagged to the owner as a follow-up rather than decided here (CLAUDE.md: ask before picking).
+
+- 2026-08-15: **CI caught a lockfile the local pnpm was allowed to write.** The `frontend` job failed at
+  `pnpm install --frozen-lockfile` — before a single test ran — with
+  `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`: `electron-to-chromium@1.5.406`, published 23h35m earlier, was
+  inside the repo's 24-hour `minimumReleaseAge` window. Root cause is a **tooling mismatch, not the
+  dependency**: CI installs pnpm 11 (`pnpm/action-setup` `version: 11`), which enforces the release-age
+  policy; the sandbox had pnpm 10.33, which does not — so `pnpm update --latest` resolved a package CI
+  would reject and wrote it into the lockfile. Exactly the "committed a lockfile that bypassed the policy
+  locally" case the error text warns about.
+
+  Fixed by re-resolving with `pnpm@11` (reset the lockfile to `main` first so the resolution was clean):
+  the policy-aware resolver picks `electron-to-chromium@1.5.405`, the newest release outside the window.
+  Verified by running CI's exact command, `pnpm install --frozen-lockfile`, which now passes the policy
+  check locally; gates re-run under pnpm 11 (tsc, biome 58 files, vitest 25 passed, production build).
+
+  Rejected: adding the package to `minimumReleaseAgeExclude` in `pnpm-workspace.yaml`. That list is for
+  packages deliberately adopted early (jest-dom, the biome CLI set); permanently whitelisting a rolling
+  Chromium-version data table to dodge a 24-hour wait would weaken the policy for no benefit. Also
+  rejected: simply re-running CI ~20 minutes later once 1.5.406 aged past the cutoff — it would have gone
+  green while leaving the real defect (a lockfile resolved without the policy) in place.
+
+  **Standing lesson: always use pnpm 11 in this repo** — matching `pnpm/action-setup` in `ci.yml` — or
+  the local resolution isn't the one CI will accept.
