@@ -6,38 +6,38 @@ readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
 dependencies = [
-    "python-dotenv>=1.0",
-    "pymysql>=1.1",
-    "sqlglot>=25.0",
-    "chromadb>=0.5",
-    "openai>=1.40",
-    "fastapi>=0.115",
-    "uvicorn[standard]>=0.30",
+    "python-dotenv>=1.2",
+    "pymysql>=1.2",
+    "sqlglot>=30.17",
+    "chromadb>=1.5",
+    "openai>=3.1",
+    "fastapi>=0.141",
+    "uvicorn[standard]>=0.52",
     # App datastore (decision 0008): separate Postgres for users/conversations/feedback.
-    "sqlalchemy[asyncio]>=2.0",
-    "asyncpg>=0.30",
-    "alembic>=1.13",
+    "sqlalchemy[asyncio]>=2.0.52",
+    "asyncpg>=0.31",
+    "alembic>=1.19",
     # Auth (decision 0009): JWT bearer tokens + bcrypt password hashing.
-    "pyjwt>=2.9",
-    "bcrypt>=4.2",
-    "email-validator>=2.2",  # pydantic EmailStr — validates the register/login email format
+    "pyjwt>=2.13",
+    "bcrypt>=5.0",
+    "email-validator>=2.3",  # pydantic EmailStr — validates the register/login email format
 ]
 
 # Opt-in extra for a real transformer embedder (deferred; offline embedder is the default):
 #   embeddings extra → sentence-transformers
 [project.optional-dependencies]
-embeddings = ["sentence-transformers>=5.0"]
+embeddings = ["sentence-transformers>=5.7"]
 # Standalone read-only SQL MCP server (task 0011). Opt-in: the core API doesn't need it.
 mcp = ["mcp>=2.0"]
 
 [dependency-groups]
 dev = [
-    "pytest>=8.3",
+    "pytest>=9.1",
     "pytest-cov>=7.1",  # coverage reporting in CI (task 0013)
-    "ruff>=0.6",
-    "mypy>=1.11",
-    "httpx>=0.27",  # FastAPI TestClient
-    "pre-commit>=4.0",  # local ruff/ruff-format/mypy hooks (task 0013)
+    "ruff>=0.16",
+    "mypy>=2.3",
+    "httpx>=0.28",  # FastAPI TestClient
+    "pre-commit>=4.6",  # local ruff/ruff-format/mypy hooks (task 0013)
     "mcp>=2.0",  # installed for tests/CI of the MCP server (task 0011); runtime extra is [mcp]
 ]
 
