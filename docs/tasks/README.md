@@ -62,6 +62,7 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 | [0039](0039-hardened-auth-frontend-store/) | **Harden auth + frontend store** — short-lived access (in memory) + rotating/reuse-detected refresh token + strict CSP; replace the 3 global-mutable modules with a `zustand` session store; de-string-ify the runtime adapter ([decision 0013](../decisions/0013-hardened-bearer-jwt.md), supersedes 0009) | done | — |
 | [0040](0040-language-toggle-i18n/) | **Language toggle + i18n** — react-i18next ES/EN toggle (auto-detects machine language) replacing the bilingual UI; chrome language sent to `/chat` and drives the answer language ([decision 0014](../decisions/0014-ui-language-i18n.md)) | done | — |
 | [0041](0041-persist-tool-results/) | **Persist tool steps so reloaded conversations render** — save the `run_sql` call + structured result with each turn and rebuild the SQL step/table on reload (today old conversations show only prose); extends [decision 0006](../decisions/0006-structured-results-over-sse.md) | done | 0017, 0019 |
+| [0042](0042-dependency-refresh/) | **Dependency refresh** — raise every declared floor in `backend/pyproject.toml` to today's latest, `uv lock --upgrade` + `pnpm update --latest`, bump the pre-commit ruff rev and the stale `release.yml` action pins; base-image majors held (see the task log) | done | — |
 
 ## Backlog — open, unscheduled
 
@@ -69,8 +70,24 @@ checklist, mark it `done`, then pick the next. The numbered list is the agreed b
 - Enrich the schema corpus with column descriptions + sample values (stronger schema-linking)
 - Postgres dialect variant (prove the safety layer is dialect-parameterised)
 - Second, larger/messier schema to demonstrate schema-linking at scale
+- Base-image majors deferred by [0042](0042-dependency-refresh/): Python 3.12→3.14, Node 22→24/26,
+  MySQL 8.4→9.x, Postgres 17→18, Flyway 11→13 — each a coordinated runtime change needing live
+  verification (Postgres also needs a data-directory migration story for the deployed VM)
 
 ## Done
+
+- [0042](0042-dependency-refresh/) — **dependency refresh**: the lockfiles had drifted far *ahead* of the
+  specs — `pyproject.toml` still declared scaffold-era floors (`sqlglot>=25`, `chromadb>=0.5`,
+  `openai>=1.40`, `pytest>=8.3`, `mypy>=1.11`) while `uv.lock` already resolved majors above them, so the
+  manifest no longer described what the project supports. Raised every floor to the current latest minor,
+  `uv lock --upgrade` (openai 2.53→**3.1**, sqlglot 30.16→30.17, sqlalchemy 2.0.51→2.0.52, uvicorn
+  0.52.1→0.52.3, ruff 0.16.2→0.16.3 + transitives), and `pnpm update --latest` (@assistant-ui/react
+  0.15.14, shadcn 4.18.0, zustand 5.0.15, user-event 14.6.4) with the stale `^19.0.0` React ranges
+  realigned. Also bumped `ruff-pre-commit` to match the dev-group ruff and the five action pins in
+  `release.yml`, which had been a full major behind since task 0032. The openai major was checked against
+  the only surface used (`OpenAI(...)` + `chat.completions.create`) — unchanged in 3.x. **No source
+  changes needed**; all gates green (backend 136 tests / ruff / ruff-format / mypy, frontend
+  tsc / biome / 25 tests / production build). Base-image majors deliberately held → backlog.
 
 - [0040](0040-language-toggle-i18n/) — **language toggle + i18n**: replaced the bilingual "both at once"
   UI with `react-i18next` + browser language detection — a header **ES | EN** toggle (auto-selects the
